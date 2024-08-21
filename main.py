@@ -134,10 +134,8 @@ def ret():
     PC.writeH(S[R[0xf]])
 
 def jmp():
-    A = Il>>4
-    B = Il&0x0f
-    PC.writeH(R[A])
-    PC.writeL(R[B])
+    addr = (Il<<8)|I3
+    PC.write(addr)
 
 def jif():
     zcs = Ih&0x00000111
@@ -243,7 +241,7 @@ def instruction_table():
     return ROM
 
 def main():
-    global Z, C, Ih, Il, R, PC, M, S
+    global Z, C, Ih, Il, I3, R, PC, M, S
     R = [0 for _ in range(16)]
     Z = 0
     C = 0
@@ -253,12 +251,14 @@ def main():
         0b10010000, 0x25,
         0b10010001, 0x13,
         0b00000000, 0b00000001,
+        0b01110000, 0, 4,
         0b11010000,
     ]
     M = program+[0 for _ in range(2**16-len(program))]
     S = M[2**16-2**8:]
     Ih = 0
     Il = 0
+    I3 = 0
     bits = lambda x: bin(x)[2:].zfill(8)
     byte = lambda x: hex(x)[2:].zfill(2)
     while True:
@@ -280,11 +280,19 @@ def main():
             break
         Ih = M[PC.read()]
         PC.increment()
-        Il = M[PC.read()]
-        PC.increment()
-        print("I:", bits(Ih), bits(Il))
         ins = ROM[(Ih&0b11111000)>>3]
         print(ins.__name__)
+        if ins.__name__ in ["ret", "nop", "hlt"]:
+            print("I:", bits(Ih))
+        else:
+            Il = M[PC.read()]
+            PC.increment()
+            if ins.__name__ in ["jmp", "jif"]:
+                I3 = M[PC.read()]
+                PC.increment()
+                print("I:", bits(Ih), bits(Il), bits(I3))
+            else:
+                print("I:", bits(Ih), bits(Il))
         ins()
 
 if __name__ == "__main__":

@@ -1,30 +1,30 @@
-ins byte1   byte2    flags pseudo
-    7654321076543210
-add 00000   A___B___ Z, C  R[A]=R[A]+R[B]
-sub 00001   A___B___ Z, C  R[A]=R[A]-R[B]
-mul 00010   A___B___ Z, C  tmp=R[A]*R[B]; R[A]=tmp[H]; R[B]=tmp[L]
-div 00011   A___B___ Z, C  tmp=R[A]/R[B]; R[A]=tmp[H]; R[B]=tmp[L]
-shl 00100   A___     Z, C  R[A]=R[A]<<1
-shr 00101   A___     Z, C  R[A]=R[A]>>1
-and 00110   A___B___ Z     R[A]=R[A]&R[B]
-orr 00111   A___B___ Z     R[A]=R[A]|R[B]
-xor 01000   A___B___ Z     R[A]=R[A]^R[B]
-not 01001   A___     Z     R[A]=~R[A]
-psh 01010   A___           S[R[0xf]]=R[A]; R[0xf]++
-pop 01011   A___           R[0xf]--; R[A]=S[R[0xf]]
-cal 01100   A___B___       S[R[0xf]]=PCh; R[0xf]++; S[R[0xf]]=PCl; R[0xf]++; PCh=R[A]; PCl=R[B]
-ret 01101                  R[0xf]--; PCl=S[R[0xf]]; R[0xf]--; PCh=S[R[0xf]]
-jmp 01110   A___B___       PCh=R[A]; PCl=R[B]
-jif 01111zcsA___B___       PCh=R[A]; PCl=R[B] if zcs=101&&Z=1 || zcs=100&&Z=0 || zcs=011&&C=1 || zcs=010&&C=0 (zero, carry, set)
-lod 1000D___A___B___ Z     R[D]=M[(R[A]<<8)&R[B]]
-ldi 1001D___imm_____ Z     R[D]=imm
-sto 1010D___A___B___ Z     M[(R[A]<<8)&R[B]]=R[D]
-inc 10110   A___     Z, C  R[A]=R[A]+1
-dec 10111   A___     Z, C  R[A]=R[A]+1
-cmp 11000   A___B___ Z, C  R[A]-R[B]
+ins byte1   byte2   byte3     flags pseudo
+    765432107654321076543210  
+add 00000   A___B___          Z, C  R[A]=R[A]+R[B]
+sub 00001   A___B___          Z, C  R[A]=R[A]-R[B]
+mul 00010   A___B___          Z, C  tmp=R[A]*R[B]; R[A]=tmp[H]; R[B]=tmp[L]
+div 00011   A___B___          Z, C  tmp=R[A]/R[B]; R[A]=tmp[H]; R[B]=tmp[L]
+shl 00100   A___              Z, C  R[A]=R[A]<<1
+shr 00101   A___              Z, C  R[A]=R[A]>>1
+and 00110   A___B___          Z     R[A]=R[A]&R[B]
+orr 00111   A___B___          Z     R[A]=R[A]|R[B]
+xor 01000   A___B___          Z     R[A]=R[A]^R[B]
+not 01001   A___              Z     R[A]=~R[A]
+psh 01010   A___                    S[R[0xf]]=R[A]; R[0xf]++
+pop 01011   A___                    R[0xf]--; R[A]=S[R[0xf]]
+cal 01100   A___B___                S[R[0xf]]=PCh; R[0xf]++; S[R[0xf]]=PCl; R[0xf]++; PCh=R[A]; PCl=R[B]
+ret 01101                           R[0xf]--; PCl=S[R[0xf]]; R[0xf]--; PCh=S[R[0xf]]
+jmp 01110   addr____________        PC=addr
+jif 01111zcsaddr____________        PC=addr; if zcs=101&&Z=1 || zcs=100&&Z=0 || zcs=011&&C=1 || zcs=010&&C=0 (zero, carry, set)
+lod 1000D___A___B___          Z     R[D]=M[(R[A]<<8)&R[B]]
+ldi 1001D___imm_____          Z     R[D]=imm
+sto 1010D___A___B___          Z     M[(R[A]<<8)&R[B]]=R[D]
+inc 10110   A___              Z, C  R[A]=R[A]+1
+dec 10111   A___              Z, C  R[A]=R[A]+1
+cmp 11000   A___B___          Z, C  R[A]-R[B]
 nop 11001                  
 hlt 11010                  
-mov 11011   A___B___       R[B]=R[A]
+mov 11011   A___B___                R[B]=R[A]
 
 F 8-bit flags register
 F -> [ (6) | Z | C ]
