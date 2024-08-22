@@ -1,0 +1,8 @@
+
+.func
+psh r1
+ldi r1 5
+add r0 r1
+pop r1
+ret
+

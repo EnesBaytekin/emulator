@@ -118,14 +118,12 @@ def pop():
     R[A] = S[R[0xf]]
 
 def cal():
-    A = Il>>4
-    B = Il&0x0f
+    addr = (Il<<8)|I3
     S[R[0xf]] = PC.readH()
     R[0xf] += 1
     S[R[0xf]] = PC.readL()
     R[0xf] += 1
-    PC.writeH(R[A])
-    PC.writeL(R[B])
+    PC.write(addr)
 
 def ret():
     R[0xf] -= 1
@@ -138,15 +136,13 @@ def jmp():
     PC.write(addr)
 
 def jif():
-    zcs = Ih&0x00000111
+    zcs = Ih&0b00000111
     if (zcs == 0b101 and Z) \
     or (zcs == 0b100 and not Z) \
     or (zcs == 0b011 and C) \
     or (zcs == 0b010 and not C):
-        A = Il>>4
-        B = Il&0x0f
-        PC.writeH(R[A])
-        PC.writeL(R[B])
+        addr = (Il<<8)|I3
+        PC.write(addr)
 
 def lod():
     D = Ih&0x0f
@@ -248,10 +244,10 @@ def main():
     PC = ProgramCounter()
     ROM = instruction_table()
     program = [
-        0b10010000, 0x25,
-        0b10010001, 0x13,
+        0b10010000, 0xf0,
+        0b10010001, 0x01,
         0b00000000, 0b00000001,
-        0b01110000, 0, 4,
+        0b01111010, 0, 4,
         0b11010000,
     ]
     M = program+[0 for _ in range(2**16-len(program))]
@@ -287,7 +283,7 @@ def main():
         else:
             Il = M[PC.read()]
             PC.increment()
-            if ins.__name__ in ["jmp", "jif"]:
+            if ins.__name__ in ["jmp", "jif", "cal"]:
                 I3 = M[PC.read()]
                 PC.increment()
                 print("I:", bits(Ih), bits(Il), bits(I3))

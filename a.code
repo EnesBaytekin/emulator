@@ -1,0 +1,7 @@
+
+.main
+ldi r0 42
+ldi r1 21
+add r0 r1
+cal func
+
