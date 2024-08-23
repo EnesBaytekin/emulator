@@ -5,7 +5,7 @@ class Register:
         self.size = size
         self.value = 0
     def write(self, value):
-        self.value = value%self.size
+        self.value = value%(2**self.size)
     def read(self):
         return self.value
 
@@ -249,7 +249,7 @@ def main():
     bits = lambda x: bin(x)[2:].zfill(8)
     byte = lambda x: hex(x)[2:].zfill(2)
     while True:
-        print("PC:", byte(PC.value))
+        print("PC:", hex(PC.value)[2:].zfill(4))
         print("Z:", int(Z), "C:", int(C))
         print("R:", end=" ")
         for i in R:

@@ -9,9 +9,13 @@ lod r1 var1
 lod r2 var2
 sto r1 var2
 add r1 r2
+jif c 1 halt
 sto r1 var1
 mov r1 r0
 jmp loop
+
+.halt
+hlt
 
 .var1
 nop
