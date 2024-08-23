@@ -151,7 +151,7 @@ def compile(codes):
                         error_line(f"'{instruction}' takes 1 arguments, {len(elements)} given.")
                     element = elements[0]
                     addr = check_if_number(element)
-                    if addr<0 or 65535<=addr:
+                    if addr<0 or 65535<addr:
                         error_line(f"'{addr}' is not in the range [0, 65535]")
                     bitstring += bin(addr)[2:].zfill(16)
                 elif instruction in [
@@ -178,7 +178,7 @@ def compile(codes):
                     bitstring += set_
                     element = elements[2]
                     addr = check_if_number(element)
-                    if addr<0 or 256<=addr:
+                    if addr<0 or 65535<addr:
                         error_line(f"'{addr}' is not in the range [0, 255]")
                     bitstring += bin(addr)[2:].zfill(16)
                 elif instruction in [
@@ -204,7 +204,7 @@ def compile(codes):
                     bitstring += bin(reg_index)[2:].zfill(4)
                     element = elements[1]
                     addr = check_if_number(element)
-                    if addr<0 or 65535<=addr:
+                    if addr<0 or 65535<addr:
                         error_line(f"'{addr}' is not in the range [0, 65535]")
                     bitstring += bin(addr)[2:].zfill(16)
                 elif instruction in [
@@ -256,7 +256,11 @@ def main():
                 error("No output name given after -o")
         code = get_input(files)
         bytecode = compile(code)
-        print(bytecode)
+        for line in range(len(bytecode)//16+1):
+            print(f"{hex(line)[2:].zfill(4)}:", end=" ")
+            for byte in bytecode[line*16:line*16+16]:
+                print(hex(byte)[2:].zfill(2), end=" ")
+            print()
         with open(output_name, "wb") as file:
             file.write(bytecode)
         print(f"Saved as '{output_name}'")

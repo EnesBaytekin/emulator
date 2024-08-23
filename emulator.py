@@ -148,22 +148,22 @@ def lod():
     A = Ih&0x0f
     addr = (Il<<8)|I3
     global Z
-    R[D] = M[addr]
-    Z = R[D] == 0
+    R[A] = M[addr]
+    Z = R[A] == 0
 
 def ldi():
-    D = Ih&0x0f
+    A = Ih&0x0f
     imm = Il
     global Z
-    R[D] = imm
-    Z = R[D] == 0
+    R[A] = imm
+    Z = R[A] == 0
 
 def sto():
     A = Ih&0x0f
     addr = (Il<<8)|I3
     global Z
-    M[addr] = R[D]
-    Z = R[D] == 0
+    M[addr] = R[A]
+    Z = R[A] == 0
 
 def inc():
     A = Il>>4
@@ -264,6 +264,7 @@ def main():
         for i in S[:16]:
             print(byte(i), end=" ")
         print()
+        print(R[0])
         if "q" in input("press enter"):
             break
         Ih = M[PC.read()]
@@ -275,7 +276,7 @@ def main():
         else:
             Il = M[PC.read()]
             PC.increment()
-            if ins.__name__ in ["jmp", "jif", "cal"]:
+            if ins.__name__ in ["jmp", "jif", "cal", "sto", "lod"]:
                 I3 = M[PC.read()]
                 PC.increment()
                 print("I:", bits(Ih), bits(Il), bits(I3))
