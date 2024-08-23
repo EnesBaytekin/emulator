@@ -1,4 +1,4 @@
-
+from sys import argv
 
 class Register:
     def __init__(self, size):
@@ -17,13 +17,13 @@ class ProgramCounter(Register):
     def jump(self, address):
         self.value = address
     def writeL(self, value):
-        self.value = (self.value&0xff00)|value%8
+        self.value = (self.value&0xff00)|(value%256)
     def writeH(self, value):
-        self.value = (self.value&0x00ff)|((value%8)<<8)
+        self.value = (self.value&0x00ff)|((value%256)<<8)
     def readL(self):
         return self.value&0x00ff
     def readH(self):
-        return self.value&0xff00>>8
+        return (self.value&0xff00)>>8
     def __repr__(self):
         return f"{self.value}"
 
@@ -145,11 +145,9 @@ def jif():
         PC.write(addr)
 
 def lod():
-    D = Ih&0x0f
-    A = Il>>4
-    B = Il&0x0f
+    A = Ih&0x0f
+    addr = (Il<<8)|I3
     global Z
-    addr = (R[A]<<8)&R[B]
     R[D] = M[addr]
     Z = R[D] == 0
 
@@ -161,11 +159,9 @@ def ldi():
     Z = R[D] == 0
 
 def sto():
-    D = Ih&0x0f
-    A = Il>>4
-    B = Il&0x0f
+    A = Ih&0x0f
+    addr = (Il<<8)|I3
     global Z
-    addr = (R[A]<<8)&R[B]
     M[addr] = R[D]
     Z = R[D] == 0
 
@@ -243,14 +239,9 @@ def main():
     C = 0
     PC = ProgramCounter()
     ROM = instruction_table()
-    program = [
-        0b10010000, 0xf0,
-        0b10010001, 0x01,
-        0b00000000, 0b00000001,
-        0b01111010, 0, 4,
-        0b11010000,
-    ]
-    M = program+[0 for _ in range(2**16-len(program))]
+    with open(argv[1], "rb") as file:
+        program = list(file.read())
+    M = program+[0xaa for _ in range(2**16-len(program))]
     S = M[2**16-2**8:]
     Ih = 0
     Il = 0
@@ -258,16 +249,17 @@ def main():
     bits = lambda x: bin(x)[2:].zfill(8)
     byte = lambda x: hex(x)[2:].zfill(2)
     while True:
-        print("PC:", PC)
+        print("PC:", byte(PC.value))
         print("Z:", int(Z), "C:", int(C))
         print("R:", end=" ")
         for i in R:
             print(byte(i), end=" ")
         print()
-        print("M:", end=" ")
-        for i in M[:16]:
-            print(byte(i), end=" ")
-        print()
+        print("M:")
+        for j in range(4):
+            for i in M[j*16:j*16+16]:
+                print(byte(i), end=" ")
+            print()
         print("S:", end=" ")
         for i in S[:16]:
             print(byte(i), end=" ")
