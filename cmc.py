@@ -85,7 +85,7 @@ def check_if_number(element):
         number = element[-1]
         base = 2
     else:
-        chars = "0123455789"
+        chars = "0123456789"
         number = element
         base = 10
     if len(number) == 0:
