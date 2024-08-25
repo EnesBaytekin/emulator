@@ -63,37 +63,93 @@ def error_line(msg, code=1):
     print(f"{index+1}".rjust(len(indexstr))+" | ...", file=stderr)
     exit(code)
 
-def check_if_register(element):
-    if len(element) == 2 and \
-    element[0].lower() == "r" and \
-    element[1].lower() in "0123456789abcdef":
+def is_register(element):
+    return (
+        len(element) == 2 and
+        element[0].lower() == "r" and
+        element[1].lower() in "0123456789abcdef"
+    )
+
+def get_register(element):
+    if is_register(element):
         reg_index = int(element[1], 16)
         return reg_index
     else:
         error_line(f"Register expected, got: {element}")
 
-def check_if_number(element):
-    if element in labels:
-        return labels[element]
+def is_hex(element):
     element = element.lower()
-    if element[-1] == "x":
-        chars = "0123456789abcdef"
+    if len(element) <= 1:
+        return False
+    if element[-1] != "x":
+        return False
+    for c in element[:-1]:
+        if c not in "0123456789abcdef":
+            return False
+    return True
+
+def is_bin(element):
+    element = element.lower()
+    if len(element) <= 1:
+        return False
+    if element[-1] != "b":
+        return False
+    for c in element[:-1]:
+        if c not in "01":
+            return False
+    return True
+
+def is_dec(element):
+    return element.isdigit()
+
+def is_number(element):
+    return (
+        is_hex(element) or
+        is_bin(element) or
+        is_dec(element)
+    )
+
+def get_number(element):
+    if is_hex(element):
         number = element[:-1]
         base = 16
-    elif element[-1] == "b":
-        chars = "01"
-        number = element[-1]
+    elif is_bin(element):
+        number = element[:-1]
         base = 2
-    else:
-        chars = "0123456789"
+    elif is_dec(element):
         number = element
         base = 10
-    if len(number) == 0:
+    else:
         error_line(f"Number expected, got: {element}")
-    for c in number:
-        if c not in chars:
-            error_line(f"Number expected, got: {element}")
     return int(number, base)
+
+def is_label(element):
+    return element in labels
+
+def get_label(element):
+    return labels[element]
+
+def get_address(element):
+    for sign in "+-":
+        if sign in element:
+            index = element.index(sign)
+            if index == 0 or index == len(element)-1:
+                error_line(f"Invalid use of '{sign}' in address: {element}")
+            symbol = element[:index]
+            rest = element[index+1:]
+            if is_label(symbol):
+                address = get_label(symbol)
+            if is_number(symbol):
+                address = get_number(symbol)
+            address += get_address(rest)
+            return address
+    else:
+        if is_number(element):
+            return get_number(element)
+        elif is_label(element):
+            return get_label(element)
+        else:
+            error_line(f"Invalid address: {element}")
 
 def compile(codes):
     global labels, file_name, line_number, line
@@ -114,7 +170,9 @@ def compile(codes):
             else:
                 elements = line.split()
                 instruction = elements.pop(0).lower()
-                if instruction in [
+                if instruction == "put":
+                    addr += len(elements)
+                elif instruction in [
                     "jmp","cal","jif","lod","sto"
                 ]:
                     addr += 3
@@ -141,6 +199,12 @@ def compile(codes):
                 instruction = elements.pop(0).lower()
                 if instruction in table:
                     bitstring += table[instruction]
+                elif instruction == "put":
+                    for element in elements:
+                        byte = get_number(element)
+                        if byte<0 or 256<=byte:
+                            error_line(f"'{byte}' is not in the range [0, 255]")
+                        bitstring += bin(byte)[2:].zfill(8)
                 else:
                     line_error("Unknown instruction.")
                 if instruction in [
@@ -150,7 +214,7 @@ def compile(codes):
                     if len(elements) != 1:
                         error_line(f"'{instruction}' takes 1 arguments, {len(elements)} given.")
                     element = elements[0]
-                    addr = check_if_number(element)
+                    addr = get_address(element)
                     if addr<0 or 65535<addr:
                         error_line(f"'{addr}' is not in the range [0, 65535]")
                     bitstring += bin(addr)[2:].zfill(16)
@@ -177,7 +241,7 @@ def compile(codes):
                         bitstring += "01"
                     bitstring += set_
                     element = elements[2]
-                    addr = check_if_number(element)
+                    addr = get_address(element)
                     if addr<0 or 65535<addr:
                         error_line(f"'{addr}' is not in the range [0, 255]")
                     bitstring += bin(addr)[2:].zfill(16)
@@ -187,10 +251,10 @@ def compile(codes):
                     if len(elements) != 2:
                         error_line(f"'{instruction}' takes 2 arguments, {len(elements)} given.")
                     element = elements[0]
-                    reg_index = check_if_register(element)
+                    reg_index = get_register(element)
                     bitstring += bin(reg_index)[2:].zfill(4)
                     element = elements[1]
-                    imm = check_if_number(element)
+                    imm = get_number(element)
                     if imm<0 or 256<=imm:
                         error_line(f"'{imm}' is not in the range [0, 255]")
                     bitstring += bin(imm)[2:].zfill(8)
@@ -200,10 +264,10 @@ def compile(codes):
                     if len(elements) != 2:
                         error_line(f"'{instruction}' takes 2 arguments, {len(elements)} given.")
                     element = elements[0]
-                    reg_index = check_if_register(element)
+                    reg_index = get_register(element)
                     bitstring += bin(reg_index)[2:].zfill(4)
                     element = elements[1]
-                    addr = check_if_number(element)
+                    addr = get_address(element)
                     if addr<0 or 65535<addr:
                         error_line(f"'{addr}' is not in the range [0, 65535]")
                     bitstring += bin(addr)[2:].zfill(16)
@@ -215,7 +279,7 @@ def compile(codes):
                     if len(elements) != 2:
                         error_line(f"'{instruction}' takes 2 arguments, {len(elements)} given.")
                     for element in elements:
-                        reg_index = check_if_register(element)
+                        reg_index = get_register(element)
                         bitstring += bin(reg_index)[2:].zfill(4)
                 elif instruction in [
                     "shl","shr","not",
@@ -225,7 +289,7 @@ def compile(codes):
                     if len(elements) != 1:
                         error_line(f"'{instruction}' takes 1 arguments, {len(elements)} given.")
                     element = elements[0]
-                    reg_index = check_if_register(element)
+                    reg_index = get_register(element)
                     bitstring += bin(reg_index)[2:].zfill(4)
                     bitstring += "0000"
                 elif instruction in [
