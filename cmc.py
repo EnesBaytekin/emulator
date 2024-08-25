@@ -158,7 +158,7 @@ def compile(codes):
                     "jif"
                 ]:
                     if len(elements) != 3:
-                        error_line(f"'{instruction}' takes 1 arguments, {len(elements)} given.")
+                        error_line(f"'{instruction}' takes 3 arguments, {len(elements)} given.")
                     element = elements[0]
                     if len(element) == 1 and \
                     element.lower() in "zc":
