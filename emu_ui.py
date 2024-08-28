@@ -2,9 +2,147 @@ import sys
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QGridLayout, QPushButton, QGroupBox, QListWidget, QListWidgetItem,
-    QSizePolicy, QTextEdit, QAction, QFileDialog, QMenuBar, QShortcut
+    QSizePolicy, QTextEdit, QPlainTextEdit, QAction, QFileDialog, QMenuBar, QShortcut
 )
-from PyQt5.QtGui import QFont, QKeySequence
+from PyQt5.QtGui import QFont, QPainter, QColor, QTextCursor, QTextFormat
+from PyQt5.QtCore import QRect, QSize, Qt
+
+class QCodeEditor(QPlainTextEdit):
+    '''
+    QCodeEditor inherited from QPlainTextEdit providing:
+        
+        numberBar - set by DISPLAY_LINE_NUMBERS flag equals True
+        curent line highligthing - set by HIGHLIGHT_CURRENT_LINE flag equals True
+        setting up QSyntaxHighlighter
+
+    references:
+        https://john.nachtimwald.com/2009/08/19/better-qplaintextedit-with-line-numbers/    
+        http://doc.qt.io/qt-5/qtwidgets-widgets-codeeditor-example.html
+    
+    '''
+    class NumberBar(QWidget):
+        '''class that deifnes textEditor numberBar'''
+
+        def __init__(self, editor):
+            QWidget.__init__(self, editor)
+            
+            self.editor = editor
+            self.editor.blockCountChanged.connect(self.updateWidth)
+            self.editor.updateRequest.connect(self.updateContents)
+            self.font = QFont()
+            self.numberBarColor = QColor("#e8e8e8")
+                     
+        def paintEvent(self, event):
+            
+            painter = QPainter(self)
+            painter.fillRect(event.rect(), self.numberBarColor)
+             
+            block = self.editor.firstVisibleBlock()
+ 
+            # Iterate over all visible text blocks in the document.
+            while block.isValid():
+                blockNumber = block.blockNumber()
+                block_top = self.editor.blockBoundingGeometry(block).translated(self.editor.contentOffset()).top()
+ 
+                # Check if the position of the block is out side of the visible area.
+                if not block.isVisible() or block_top >= event.rect().bottom():
+                    break
+ 
+                # We want the line number for the selected line to be bold.
+                if blockNumber == self.editor.textCursor().blockNumber():
+                    self.font.setBold(True)
+                    painter.setPen(QColor("#000000"))
+                else:
+                    self.font.setBold(False)
+                    painter.setPen(QColor("#717171"))
+                painter.setFont(self.font)
+                
+                # Draw the line number right justified at the position of the line.
+                paint_rect = QRect(0, block_top, self.width(), self.editor.fontMetrics().height())
+                painter.drawText(paint_rect, Qt.AlignRight, str(blockNumber+1))
+ 
+                block = block.next()
+ 
+            painter.end()
+            
+            QWidget.paintEvent(self, event)
+ 
+        def getWidth(self):
+            count = self.editor.blockCount()
+            width = self.fontMetrics().width(str(count)) + 10
+            return width      
+        
+        def updateWidth(self):
+            width = self.getWidth()
+            if self.width() != width:
+                self.setFixedWidth(width)
+                self.editor.setViewportMargins(width, 0, 0, 0);
+ 
+        def updateContents(self, rect, scroll):
+            if scroll:
+                self.scroll(0, scroll)
+            else:
+                self.update(0, rect.y(), self.width(), rect.height())
+            
+            if rect.contains(self.editor.viewport().rect()):   
+                fontSize = self.editor.currentCharFormat().font().pointSize()
+                self.font.setPointSize(fontSize)
+                self.font.setStyle(QFont.StyleNormal)
+                self.updateWidth()
+                
+        
+    def __init__(self, DISPLAY_LINE_NUMBERS=True, HIGHLIGHT_CURRENT_LINE=True,
+                 SyntaxHighlighter=None, *args):        
+        '''
+        Parameters
+        ----------
+        DISPLAY_LINE_NUMBERS : bool 
+            switch on/off the presence of the lines number bar
+        HIGHLIGHT_CURRENT_LINE : bool
+            switch on/off the current line highliting
+        SyntaxHighlighter : QSyntaxHighlighter
+            should be inherited from QSyntaxHighlighter
+        
+        '''                  
+        super(QCodeEditor, self).__init__()
+        
+        self.setFont(QFont("Courier", 11))
+        self.setLineWrapMode(QPlainTextEdit.NoWrap)
+                               
+        self.DISPLAY_LINE_NUMBERS = DISPLAY_LINE_NUMBERS
+
+        if DISPLAY_LINE_NUMBERS:
+            self.number_bar = self.NumberBar(self)
+            
+        if HIGHLIGHT_CURRENT_LINE:
+            self.currentLineNumber = None
+            self.currentLineColor = self.palette().alternateBase()
+            # self.currentLineColor = QColor("#e8e8e8")
+            self.cursorPositionChanged.connect(self.highligtCurrentLine)
+        
+        if SyntaxHighlighter is not None: # add highlighter to textdocument
+           self.highlighter = SyntaxHighlighter(self.document())         
+                 
+    def resizeEvent(self, *e):
+        '''overload resizeEvent handler'''
+                
+        if self.DISPLAY_LINE_NUMBERS:   # resize number_bar widget
+            cr = self.contentsRect()
+            rec = QRect(cr.left(), cr.top(), self.number_bar.getWidth(), cr.height())
+            self.number_bar.setGeometry(rec)
+        
+        QPlainTextEdit.resizeEvent(self, *e)
+
+    def highligtCurrentLine(self):
+        newCurrentLineNumber = self.textCursor().blockNumber()
+        if newCurrentLineNumber != self.currentLineNumber:                
+            self.currentLineNumber = newCurrentLineNumber
+            hi_selection = QTextEdit.ExtraSelection() 
+            hi_selection.format.setBackground(self.currentLineColor)
+            hi_selection.format.setProperty(QTextFormat.FullWidthSelection, True)
+            hi_selection.cursor = self.textCursor()
+            hi_selection.cursor.clearSelection() 
+            self.setExtraSelections([hi_selection])           
 
 class Emulator(QMainWindow):
     def __init__(self):
@@ -27,12 +165,12 @@ class Emulator(QMainWindow):
         file_menu = menubar.addMenu("File")
         
         open_action = QAction("Open", self)
-        open_action.setShortcut(QKeySequence("Ctrl+O"))
+        open_action.setShortcut("Ctrl+O")
         open_action.triggered.connect(self.open_file)
         file_menu.addAction(open_action)
         
         save_action = QAction("Save", self)
-        save_action.setShortcut(QKeySequence("Ctrl+S"))
+        save_action.setShortcut("Ctrl+S")
         save_action.triggered.connect(self.save_file)
         file_menu.addAction(save_action)
 
@@ -111,20 +249,19 @@ class Emulator(QMainWindow):
 
         # Step Button
         self.step_button = QPushButton("Step")
-        self.step_button.clicked.connect(self.step)  # Connect Step button to step function
+        self.step_button.clicked.connect(self.step)
         left_layout.addWidget(self.step_button)
 
         # Adjust the width of the left layout to be more compact
         left_widget = QWidget()
         left_widget.setLayout(left_layout)
         left_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        left_widget.setMaximumWidth(300)  # Set a maximum width for the left layout
+        left_widget.setMaximumWidth(300)
 
-        # Assembly Code Display on the Right using QTextEdit
+        # Assembly Code Display on the Right using LineNumberedTextEdit
         self.asm_group_box = QGroupBox("Assembly Code")
-        self.asm_text_edit = QTextEdit()
-        self.asm_text_edit.setFont(QFont("Courier", 10))  # Monospace font
-        self.asm_text_edit.setReadOnly(False)  # Allow editing
+        self.asm_text_edit = QCodeEditor()
+        # self.asm_text_edit.setFont(QFont("Courier", 11))
         self.populate_asm_text()
 
         asm_layout = QVBoxLayout()
@@ -132,16 +269,16 @@ class Emulator(QMainWindow):
         self.asm_group_box.setLayout(asm_layout)
 
         main_layout.addWidget(left_widget)
-        main_layout.addWidget(self.asm_group_box, 1)  # 1 indicates the weight of the layout (expandable)
+        main_layout.addWidget(self.asm_group_box, 1)
 
-        self.setMinimumWidth(800)  # Set a minimum width for the window
+        self.setMinimumWidth(800)
 
-    def initEmulator(self, prog_memory):
+    def initEmulator(self):
         """Initialize emulator state."""
         self.pc = 0x0000
         self.registers_values = [0x00] * 16
-        self.memory = list(prog_memory)+[0x00] * (65536-len(prog_memory))  # 64KB memory
-        self.stack = [0x00] * 256  # 256 bytes stack
+        self.memory = [0x00] * 65536
+        self.stack = [0x00] * 256
         self.update_ui()
 
     def update_ui(self):
@@ -185,8 +322,9 @@ class Emulator(QMainWindow):
 
     def search_ram(self):
         address_text = self.ram_search.text()
-        if not all(c in "0123456789abcdef" for c in address_text):
+        if not all(c in "0123456789ABCDEF" for c in address_text.upper()) or len(address_text) > 4:
             return
+
         address = int(address_text, 16)
         if 0 <= address < 65536:
             item = self.ram_list.item(address)
@@ -195,8 +333,9 @@ class Emulator(QMainWindow):
 
     def search_stack(self):
         address_text = self.stack_search.text()
-        if not all(c in "0123456789abcdef" for c in address_text):
+        if not all(c in "0123456789ABCDEF" for c in address_text.upper()) or len(address_text) > 2:
             return
+
         address = int(address_text, 16)
         if 0 <= address < 256:
             item = self.stack_list.item(address)
@@ -204,71 +343,58 @@ class Emulator(QMainWindow):
             self.stack_list.scrollToItem(item)
 
     def populate_ram_list(self):
-        """Populate RAM list with addresses and values."""
-        self.ram_list.clear()
-        for i in range(65536):
-            item_text = f"{i:04X}: {self.memory[i]:02X}"
-            item = QListWidgetItem(item_text)
+        """Populate the RAM display list."""
+        for address in range(65536):
+            item = QListWidgetItem(f"{address:04X}: {self.memory[address]:02X}")
             self.ram_list.addItem(item)
 
     def populate_stack_list(self):
-        """Populate Stack list with addresses and values."""
-        self.stack_list.clear()
-        for i in range(256):
-            addr = i
-            item_text = f"{addr:02X}: {self.stack[i]:02X}"
-            item = QListWidgetItem(item_text)
+        """Populate the Stack display list."""
+        for address in range(256):
+            item = QListWidgetItem(f"{address:02X}: {self.stack[address]:02X}")
             self.stack_list.addItem(item)
 
     def populate_asm_text(self):
-        self.asm_text_edit.setPlainText("")
-
-    def open_file(self):
-        """Open a file and load its content into the editor."""
-        file_name, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*)")
-        if file_name:
-            with open(file_name, 'r') as file:
-                data = file.read()
-            self.asm_text_edit.setPlainText(data)
-            from os import system
-            output_name = f"{'.'.join(file_name.split('.')[:-1])}.o"
-            system(f"cmc.py {file_name} -o {output_name}")
-            with open(output_name, 'rb') as file:
-                data = file.read()
-            self.initEmulator(data)
-            self.populate_ram_list()
-
-    def save_file(self):
-        """Save the content of the editor to a file."""
-        file_name, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*)")
-        if file_name:
-            with open(file_name, 'w') as file:
-                file.write(self.asm_text_edit.toPlainText())
+        """Populate the Assembly Code display."""
+        # This is a placeholder. Normally, you'd load actual assembly code here.
+        example_code = """MOV R1, 0x45
+MOV R2, R1
+ADD R1, R2
+SUB R1, 0x10
+JMP 0x0010
+"""
+        self.asm_text_edit.setPlainText(example_code)
 
     def step(self):
-        """Execute one step of the program and update the UI."""
-        # Example step implementation (simplified)
-        if self.pc < 65536:
-            # Example: Increment the value at the PC address
-            self.memory[self.pc] += 1
-            self.update_ram(self.pc, self.memory[self.pc])
-            
-            # Example: Increment PC (could be replaced by actual instruction execution)
-            self.pc = (self.pc + 1) % 65536
-            
-            # Update PC and RAM
-            self.update_pc(self.pc)
-            self.update_ram(self.pc, self.memory[self.pc])
+        """Execute one step of the emulator."""
+        # This is a placeholder. Normally, you'd fetch, decode, and execute the next instruction.
+        # For now, let's just increment the PC and update the display.
+        self.pc += 1
+        if self.pc >= 65536:
+            self.pc = 0
+        self.update_pc(self.pc)
+        # You would also update other parts of the emulator state here.
 
-            # Optionally, update other parts of the UI (e.g., registers, flags) based on instruction execution
+    def open_file(self):
+        """Open a file containing assembly code."""
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(self, "Open Assembly Code File", "", "All Files (*)", options=options)
+        if file_name:
+            with open(file_name, 'r') as file:
+                code = file.read()
+                self.asm_text_edit.setPlainText(code)
 
-def main():
-    app = QApplication(sys.argv)
-    emulator = Emulator()
-    emulator.setWindowTitle("Emulator")
-    emulator.resize(1000, 600)
-    emulator.show()
-    sys.exit(app.exec_())
+    def save_file(self):
+        """Save the current assembly code to a file."""
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save Assembly Code File", "", "Assembly Files (*.asm);;All Files (*)", options=options)
+        if file_name:
+            with open(file_name, 'w') as file:
+                code = self.asm_text_edit.toPlainText()
+                file.write(code)
 
 if __name__ == '__main__':
-    main()
+    app = QApplication(sys.argv)
+    emulator = Emulator()
+    emulator.show()
+    sys.exit(app.exec_())
