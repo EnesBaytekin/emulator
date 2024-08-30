@@ -34,7 +34,7 @@ class Emulator:
     def __init__(self):
         self.program_counter = 0
         self.registers = array("B", [0]*16)
-        self.memory = array("B", [0]*65535)
+        self.memory = array("B", [0]*65536)
         self.carry = 0
         self.zero = 0
         self.instructions = array("B", [0, 0, 0])
