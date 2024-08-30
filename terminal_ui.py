@@ -24,16 +24,23 @@ class App:
                     if data[0].lower() == "m":
                         addr = int(data[1:], 16)
                         if 0 <= addr < 65536:
-                            self.m_origin = (addr>>4)<<4
-                            self.m_origin = min(self.m_origin, 0xfff0-3*0x0010)
+                            self.focus_memory_address(addr)
                     elif data[0].lower() == "s":
                         addr = int(data[1:], 16)
                         if 0 <= addr < 256:
-                            self.s_origin = 0xff00|(addr>>4)<<4
-                            self.s_origin = min(self.s_origin, 0xfff0-1*0x0010)
+                            self.focus_stack_address(addr)
             else:
                 self.emulator.step()
+                pc = (self.emulator.program_counter>>4)<<4
+                if pc-self.m_origin >= 4*0x0010:
+                    self.focus_memory_address(pc-3*0x0010)
             self.draw()
+    def focus_memory_address(self, addr):
+        self.m_origin = (addr>>4)<<4
+        self.m_origin = min(self.m_origin, 0xfff0-3*0x0010)
+    def focus_stack_address(self, addr):
+        self.s_origin = 0xff00|(addr>>4)<<4
+        self.s_origin = min(self.s_origin, 0xfff0-1*0x0010)
     def draw(self):
         emu = self.emulator
         screen = ""
