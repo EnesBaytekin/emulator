@@ -1,288 +1,265 @@
-from sys import argv
+from array import array
 
-class Register:
-    def __init__(self, size):
-        self.size = size
-        self.value = 0
-    def write(self, value):
-        self.value = value%(2**self.size)
-    def read(self):
-        return self.value
+class Emulator:
+    def get_function(self, ins):
+        if   ins == 0b00000: return self.add
+        elif ins == 0b00001: return self.sub
+        elif ins == 0b00010: return self.mul
+        elif ins == 0b00011: return self.div
+        elif ins == 0b00100: return self.shl
+        elif ins == 0b00101: return self.shr
+        elif ins == 0b00110: return self.and_
+        elif ins == 0b00111: return self.orr
+        elif ins == 0b01000: return self.xor
+        elif ins == 0b01001: return self.not_
+        elif ins == 0b01010: return self.psh
+        elif ins == 0b01011: return self.pop
+        elif ins == 0b01100: return self.cal
+        elif ins == 0b01101: return self.ret
+        elif ins == 0b01110: return self.jmp
+        elif ins == 0b01111: return self.jif
+        elif ins == 0b10000: return self.lod
+        elif ins == 0b10001: return self.lod
+        elif ins == 0b10010: return self.ldi
+        elif ins == 0b10011: return self.ldi
+        elif ins == 0b10100: return self.sto
+        elif ins == 0b10101: return self.sto
+        elif ins == 0b10110: return self.inc
+        elif ins == 0b10111: return self.dec
+        elif ins == 0b11000: return self.cmp
+        elif ins == 0b11001: return self.nop
+        elif ins == 0b11010: return self.hlt
+        elif ins == 0b11011: return self.mov
 
-class ProgramCounter(Register):
     def __init__(self):
-        super().__init__(16)
-    def increment(self):
-        self.value += 1
-    def jump(self, address):
-        self.value = address
-    def writeL(self, value):
-        self.value = (self.value&0xff00)|(value%256)
-    def writeH(self, value):
-        self.value = (self.value&0x00ff)|((value%256)<<8)
-    def readL(self):
-        return self.value&0x00ff
-    def readH(self):
-        return (self.value&0xff00)>>8
-    def __repr__(self):
-        return f"{self.value}"
+        self.program_counter = 0
+        self.registers = array("B", [0]*16)
+        self.memory = array("B", [0]*65535)
+        self.carry = 0
+        self.zero = 0
+        self.instructions = array("B", [0, 0, 0])
+        self.halted = False
 
-def add():
-    A = Il>>4
-    B = Il&0x0f
-    global Z, C
-    R[A] = R[A]+R[B]
-    Z = R[A] == 0
-    C = R[A] >= 256
-    R[A] = R[A]%256
+    def load(self, program):
+        self.program_counter = 0
+        self.registers[0xf] = 0
+        self.memory = array("B", program)+self.memory[len(program):]
+        self.halted = False
 
-def sub():
-    A = Il>>4
-    B = Il&0x0f
-    global Z, C
-    R[A] = R[A]-R[B]
-    Z = R[A] == 0
-    C = R[A] < 0
-    R[A] = R[A]%256
+    def step(self):
+        self.instructions[0] = self.memory[self.program_counter]
+        self.program_counter += 1
+        function = self.get_function()
+        if function not in [
+            self.ret,
+            self.nop,
+            self.hlt,
+        ]:
+            self.instructions[1] = self.memory[self.program_counter]
+            self.program_counter += 1
+            if function in [
+                self.cal,
+                self.jump,
+                self.jif,
+                self.lod,
+                self.sto,
+            ]:
+                self.instructions[2] = self.memory[self.program_counter]
+                self.program_counter += 1
+        self.function()
 
-def mul():
-    A = Il>>4
-    B = Il&0x0f
-    global Z, C
-    temp = R[A]*R[B]
-    R[A] = temp&0xff00
-    R[B] = temp&0x00ff
-    Z = R[B] == 0
-    C = R[A] > 0
+    def add(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        result = R[A]+R[B]
+        self.carry = int(result >= 256)
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def div():
-    A = Il>>4
-    B = Il&0x0f
-    global Z, C
-    R[A] = R[A]//R[B]
-    R[B] = R[A]%R[B]
-    Z = R[B] == 0
-    C = R[A] > 0
+    def sub(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        result = R[A]-R[B]
+        self.carry = int(result < 0)
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def shl():
-    A = Il>>4
-    global Z, C
-    R[A] = R[A]<<1
-    Z = R[A] == 0
-    C = R[A] >= 256
-    R[A] = R[A]%256
+    def mul(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        result = R[A]*R[B]
+        R[A] = (result&0xff00)>>8
+        R[B] = (result&0x00ff)
+        self.carry = int(R[A] > 0)
+        self.zero = int(R[B] == 0)
 
-def shr():
-    A = Il>>4
-    global Z, C
-    R[A] = R[A]>>1
-    Z = R[A] == 0
-    C = R[A] >= 256
-    R[A] = R[A]%256
+    def div(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        high = R[A]//R[B]
+        low = R[A]%R[B]
+        R[A] = (high&0xff00)>>8
+        R[B] = (low&0x00ff)
+        self.carry = int(R[A] > 0)
+        self.zero = int(R[B] == 0)
 
-def and_():
-    A = Il>>4
-    B = Il&0x0f
-    global Z
-    R[A] = R[A]&R[B]
-    Z = R[A] == 0
+    def shl(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        R = self.registers
+        result = R[A]<<1
+        self.carry = (R[A]&0b10000000)>>7
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def orr():
-    A = Il>>4
-    B = Il&0x0f
-    global Z
-    R[A] = R[A]|R[B]
-    Z = R[A] == 0
+    def shr(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        R = self.registers
+        result = R[A]>>1
+        self.carry = (R[A]&0b00000001)
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def xor():
-    A = Il>>4
-    B = Il&0x0f
-    global Z
-    R[A] = R[A]^R[B]
-    Z = R[A] == 0
+    def and_(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        result = R[A]&R[B]
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def not_():
-    A = Il>>4
-    global Z
-    R[A] = ~R[A]
-    Z = R[A] == 0
+    def orr(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        result = R[A]|R[B]
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def psh():
-    A = Il>>4
-    S[R[0xf]] = R[A]
-    R[0xf] += 1
+    def xor(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        result = R[A]^R[B]
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def pop():
-    A = Il>>4
-    R[0xf] -= 1
-    R[A] = S[R[0xf]]
+    def not_(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        R = self.registers
+        result = ~R[A]
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def cal():
-    addr = (Il<<8)|I3
-    S[R[0xf]] = PC.readH()
-    R[0xf] += 1
-    S[R[0xf]] = PC.readL()
-    R[0xf] += 1
-    PC.write(addr)
+    def psh(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        R = self.registers
+        M = self.memory
+        M[0xff00+R[0xf]] = R[A]
+        R[0xf] += 1
 
-def ret():
-    R[0xf] -= 1
-    PC.writeL(S[R[0xf]])
-    R[0xf] -= 1
-    PC.writeH(S[R[0xf]])
+    def pop(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        R = self.registers
+        M = self.memory
+        R[0xf] -= 1
+        R[A] = M[0xff00+R[0xf]]
 
-def jmp():
-    addr = (Il<<8)|I3
-    PC.write(addr)
+    def cal(self):
+        addr = (self.instructions[1]<<8)|self.instructions[2]
+        R = self.registers
+        M = self.memory
+        high = (self.program_counter&0xff00)>>8
+        low = (self.program_counter&0x00ff)
+        M[0xff00+R[0xf]] = high
+        R[0xf] += 1
+        M[0xff00+R[0xf]] = low
+        R[0xf] += 1
+        self.program_counter = addr
 
-def jif():
-    zcs = Ih&0b00000111
-    if (zcs == 0b101 and Z) \
-    or (zcs == 0b100 and not Z) \
-    or (zcs == 0b011 and C) \
-    or (zcs == 0b010 and not C):
-        addr = (Il<<8)|I3
-        PC.write(addr)
+    def ret(self):
+        R = self.registers
+        M = self.memory
+        R[0xf] -= 1
+        low = M[0xff00+R[0xf]]
+        R[0xf] -= 1
+        high = M[0xff00+R[0xf]]
+        self.program_counter = (high<<0xff00)&low
 
-def lod():
-    A = Ih&0x0f
-    addr = (Il<<8)|I3
-    global Z
-    R[A] = M[addr]
-    Z = R[A] == 0
+    def jmp(self):
+        addr = (self.instructions[1]<<8)|self.instructions[2]
+        self.program_counter = addr
 
-def ldi():
-    A = Ih&0x0f
-    imm = Il
-    global Z
-    R[A] = imm
-    Z = R[A] == 0
+    def jif(self):
+        zcs = self.instructions[0]&0b00000111
+        addr = (self.instructions[1]<<8)|self.instructions[2]
+        if (
+            zcs == 0b101 and self.zero == 1 or
+            zcs == 0b100 and self.zero == 0 or
+            zcs == 0b011 and self.zero == 1 or
+            zcs == 0b010 and self.zero == 0
+        ):
+            self.program_counter = addr
 
-def sto():
-    A = Ih&0x0f
-    addr = (Il<<8)|I3
-    global Z
-    M[addr] = R[A]
-    Z = R[A] == 0
+    def lod(self):
+        A = self.instructions[0]&0b00001111
+        addr = (self.instructions[1]<<8)|self.instructions[2]
+        R = self.registers
+        M = self.memory
+        R[A] = M[addr]
+        self.zero = int(R[A] == 0)
 
-def inc():
-    A = Il>>4
-    global Z, C
-    R[A] = R[A]+1
-    Z = R[A] == 0
-    C = R[A] >= 256
-    R[A] = R[A]%256
+    def ldi(self):
+        A = self.instructions[0]&0b00001111
+        imm = self.instructions[1]
+        R = self.registers
+        R[A] = imm
+        self.zero = int(R[A] == 0)
 
-def dec():
-    A = Il>>4
-    global Z, C
-    R[A] = R[A]-1
-    Z = R[A] == 0
-    C = R[A] < 0
-    R[A] = R[A]%256
+    def sto(self):
+        A = self.instructions[0]&0b00001111
+        addr = (self.instructions[1]<<8)|self.instructions[2]
+        R = self.registers
+        M = self.memory
+        M[addr] = R[A]
+        self.zero = int(R[A] == 0)
 
-def cmp():
-    A = Il>>4
-    B = Il&0x0f
-    global Z, C
-    diff = R[A]-R[B]
-    Z = diff == 0
-    C = diff < 0
+    def inc(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        R = self.registers
+        result = R[A]+1
+        self.carry = int(result >= 256)
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def nop():
-    pass
+    def dec(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        R = self.registers
+        result = R[A]-1
+        self.carry = int(result < 0)
+        R[A] = (result)%256
+        self.zero = int(R[A] == 0)
 
-def hlt():
-    exit()
+    def cmp(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        result = R[A]-R[B]
+        self.carry = int(result >= 256)
+        self.zero = int((result%256) == 0)
 
-def mov():
-    A = Il>>4
-    B = Il&0x0f
-    R[B] = R[A]
+    def nop(self):
+        pass
 
-def instruction_table():
-    ROM = {}
-    ROM[0b00000] = add
-    ROM[0b00001] = sub
-    ROM[0b00010] = mul
-    ROM[0b00011] = div
-    ROM[0b00100] = shl
-    ROM[0b00101] = shr
-    ROM[0b00110] = and_
-    ROM[0b00111] = orr
-    ROM[0b01000] = xor
-    ROM[0b01001] = not_
-    ROM[0b01010] = psh
-    ROM[0b01011] = pop
-    ROM[0b01100] = cal
-    ROM[0b01101] = ret
-    ROM[0b01110] = jmp
-    ROM[0b01111] = jif
-    ROM[0b10000] = lod
-    ROM[0b10001] = lod
-    ROM[0b10010] = ldi
-    ROM[0b10011] = ldi
-    ROM[0b10100] = sto
-    ROM[0b10101] = sto
-    ROM[0b10110] = inc
-    ROM[0b10111] = dec
-    ROM[0b11000] = cmp
-    ROM[0b11001] = nop
-    ROM[0b11010] = hlt
-    ROM[0b11011] = mov
-    return ROM
+    def hlt(self):
+        self.halted = True
 
-def main():
-    global Z, C, Ih, Il, I3, R, PC, M, S
-    R = [0 for _ in range(16)]
-    Z = 0
-    C = 0
-    PC = ProgramCounter()
-    ROM = instruction_table()
-    with open(argv[1], "rb") as file:
-        program = list(file.read())
-    M = program+[0xaa for _ in range(2**16-len(program))]
-    S = M[2**16-2**8:]
-    Ih = 0
-    Il = 0
-    I3 = 0
-    bits = lambda x: bin(x)[2:].zfill(8)
-    byte = lambda x: hex(x)[2:].zfill(2)
-    while True:
-        print("PC:", hex(PC.value)[2:].zfill(4))
-        print("Z:", int(Z), "C:", int(C))
-        print("R:", end=" ")
-        for i in R:
-            print(byte(i), end=" ")
-        print()
-        print("M:")
-        for j in range(4):
-            for i in M[j*16:j*16+16]:
-                print(byte(i), end=" ")
-            print()
-        print("S:", end=" ")
-        for i in S[:16]:
-            print(byte(i), end=" ")
-        print()
-        print(R[0])
-        if "q" in input("press enter"):
-            break
-        Ih = M[PC.read()]
-        PC.increment()
-        ins = ROM[(Ih&0b11111000)>>3]
-        print(ins.__name__)
-        if ins.__name__ in ["ret", "nop", "hlt"]:
-            print("I:", bits(Ih))
-        else:
-            Il = M[PC.read()]
-            PC.increment()
-            if ins.__name__ in ["jmp", "jif", "cal", "sto", "lod"]:
-                I3 = M[PC.read()]
-                PC.increment()
-                print("I:", bits(Ih), bits(Il), bits(I3))
-            else:
-                print("I:", bits(Ih), bits(Il))
-        ins()
+    def mov(self):
+        A = (self.instructions[1]&0b11110000)>>4
+        B = (self.instructions[1]&0b00001111)
+        R = self.registers
+        R[B] = R[A]
 
-if __name__ == "__main__":
-    main()
