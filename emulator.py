@@ -49,7 +49,7 @@ class Emulator:
     def step(self):
         self.instructions[0] = self.memory[self.program_counter]
         self.program_counter += 1
-        function = self.get_function()
+        function = self.get_function(self.instructions[(0&0b11111000)>>3])
         if function not in [
             self.ret,
             self.nop,
@@ -59,14 +59,14 @@ class Emulator:
             self.program_counter += 1
             if function in [
                 self.cal,
-                self.jump,
+                self.jmp,
                 self.jif,
                 self.lod,
                 self.sto,
             ]:
                 self.instructions[2] = self.memory[self.program_counter]
                 self.program_counter += 1
-        self.function()
+        function()
 
     def add(self):
         A = (self.instructions[1]&0b11110000)>>4
