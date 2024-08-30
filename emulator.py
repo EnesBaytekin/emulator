@@ -47,9 +47,11 @@ class Emulator:
         self.halted = False
 
     def step(self):
+        if self.halted:
+            return
         self.instructions[0] = self.memory[self.program_counter]
         self.program_counter += 1
-        function = self.get_function(self.instructions[(0&0b11111000)>>3])
+        function = self.get_function((self.instructions[0]&0b11111000)>>3)
         if function not in [
             self.ret,
             self.nop,
@@ -187,7 +189,7 @@ class Emulator:
         low = M[0xff00+R[0xf]]
         R[0xf] -= 1
         high = M[0xff00+R[0xf]]
-        self.program_counter = (high<<0xff00)&low
+        self.program_counter = (high<<0xff00)|low
 
     def jmp(self):
         addr = (self.instructions[1]<<8)|self.instructions[2]

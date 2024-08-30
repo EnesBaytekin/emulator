@@ -9,14 +9,15 @@ class App:
         self.running = False
         self.m_origin = 0
         self.s_origin = 0xff00
+        self.current_file_name = ""
     def start(self):
         self.running = True
         self.draw()
         while self.running:
             data = input("> ")
-            if "q" in data:
+            if data == "q":
                 self.running = False
-            elif len(data) > 1 and data[0] in "ms":
+            elif len(data) > 1 and data[0].lower() in "ms":
                 for c in data[1:]:
                     if c.lower() not in "0123456789abcdef":
                         break
@@ -29,11 +30,24 @@ class App:
                         addr = int(data[1:], 16)
                         if 0 <= addr < 256:
                             self.focus_stack_address(addr)
+            elif len(data) > 2 and data[:2].lower() == "o ":
+                file_name = data[2:].strip()
+                try:
+                    with open(file_name, "rb") as file:
+                        program = file.read()
+                    self.emulator.load(program)
+                    self.focus_memory_address(0)
+                    self.focus_stack_address(0)
+                    self.current_file_name = file_name
+                except IOError:
+                    self.current_file_name = f"invalid file '{file_name}'"
             else:
                 self.emulator.step()
                 pc = (self.emulator.program_counter>>4)<<4
                 if pc-self.m_origin >= 4*0x0010:
                     self.focus_memory_address(pc-3*0x0010)
+                elif pc -self.m_origin < 0:
+                    self.focus_memory_address(pc)
             self.draw()
     def focus_memory_address(self, addr):
         self.m_origin = (addr>>4)<<4
@@ -44,8 +58,11 @@ class App:
     def draw(self):
         emu = self.emulator
         screen = ""
-        screen += f"{color('31;1')}PC:{color(0)} {emu.program_counter:04x}\n"
-        screen += f"{color('31;1')}Z:{color(0)} {emu.zero}\n"
+        ins = emu.get_function((emu.memory[emu.program_counter]&0b11111000)>>3).__name__[:3]
+        file_name = self.current_file_name
+        file_name = (file_name if len(file_name)<40 else (file_name[:38]+"...")).rjust(46)
+        screen += f"{color('31;1')}PC:{color(0)} {emu.program_counter:04x} {file_name}\n"
+        screen += f"{color('31;1')}Z:{color(0)} {emu.zero}        {color('32;1')}next-op: "+color('33;1')+ins+color(0)+"\n"
         screen += f"{color('31;1')}C:{color(0)} {emu.carry}\n"
         screen += " "*8+color('33;1')
         for i in range(16):
@@ -82,7 +99,6 @@ class App:
 def main():
     app = App()
     app.start()
-    
 
 if __name__ == "__main__":
     main()
