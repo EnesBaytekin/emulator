@@ -78,6 +78,8 @@ def get_register(element):
         error_line(f"Register expected, got: {element}")
 
 def is_hex(element):
+    if is_negative(element):
+        element = element[-1:]
     element = element.lower()
     if len(element) <= 1:
         return False
@@ -89,6 +91,8 @@ def is_hex(element):
     return True
 
 def is_bin(element):
+    if is_negative(element):
+        element = element[-1:]
     element = element.lower()
     if len(element) <= 1:
         return False
@@ -100,7 +104,12 @@ def is_bin(element):
     return True
 
 def is_dec(element):
+    if is_negative(element):
+        element = element[-1:]
     return element.isdigit()
+
+def is_negative(element):
+    return len(element) > 1 and element[0] == "-"
 
 def is_number(element):
     return (
@@ -159,6 +168,7 @@ def compile(codes):
     for file_name, code in codes.items():
         lines = [line for line in code.split("\n")]
         for line_number, line in enumerate(lines, 1):
+            line = line.strip()
             if len(line) == 0: continue
             if line[0] == ".":
                 if len(line) == 1:
@@ -190,6 +200,7 @@ def compile(codes):
     for file_name, code in codes.items():
         lines = [line for line in code.split("\n")]
         for line_number, line in enumerate(lines, 1):
+            line = line.strip()
             if len(line) == 0: continue
             if line[0] == ".":
                 pass

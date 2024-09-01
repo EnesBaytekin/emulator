@@ -1,4 +1,6 @@
 from emulator import Emulator
+from os import system
+from sys import argv
 
 def color(number):
     return f"\033[{number}m"
@@ -10,6 +12,9 @@ class App:
         self.m_origin = 0
         self.s_origin = 0xff00
         self.current_file_name = ""
+        if len(argv) > 1:
+            file_name = argv[1]
+            self.load_program(file_name)
     def start(self):
         self.running = True
         self.draw()
@@ -32,15 +37,9 @@ class App:
                             self.focus_stack_address(addr)
             elif len(data) > 2 and data[:2].lower() == "o ":
                 file_name = data[2:].strip()
-                try:
-                    with open(file_name, "rb") as file:
-                        program = file.read()
-                    self.emulator.load(program)
-                    self.focus_memory_address(0)
-                    self.focus_stack_address(0)
-                    self.current_file_name = file_name
-                except IOError:
-                    self.current_file_name = f"invalid file '{file_name}'"
+                self.load_program(file_name)
+            elif len(data) == 1 and data.lower() == "r":
+                self.load_program(self.current_file_name)
             else:
                 self.emulator.step()
                 pc = (self.emulator.program_counter>>4)<<4
@@ -48,7 +47,22 @@ class App:
                     self.focus_memory_address(pc-3*0x0010)
                 elif pc -self.m_origin < 0:
                     self.focus_memory_address(pc)
+                sp = (self.emulator.registers[0xf]>>4)<<4
+                if sp-self.s_origin >= 2*0x0010:
+                    self.focus_stack_address(sp-1*0x0010)
+                elif sp -self.s_origin < 0:
+                    self.focus_stack_address(sp)
             self.draw()
+    def load_program(self, file_name):
+        try:
+            with open(file_name, "rb") as file:
+                program = file.read()
+            self.emulator.load(program)
+            self.focus_memory_address(0)
+            self.focus_stack_address(0)
+            self.current_file_name = file_name
+        except IOError:
+            self.current_file_name = f"invalid file '{file_name}'"
     def focus_memory_address(self, addr):
         self.m_origin = (addr>>4)<<4
         self.m_origin = min(self.m_origin, 0xfff0-3*0x0010)
@@ -62,8 +76,9 @@ class App:
         file_name = self.current_file_name
         file_name = (file_name if len(file_name)<40 else (file_name[:38]+"...")).rjust(46)
         screen += f"{color('31;1')}PC:{color(0)} {emu.program_counter:04x} {file_name}\n"
-        screen += f"{color('31;1')}Z:{color(0)} {emu.zero}        {color('32;1')}next-op: "+color('33;1')+ins+color(0)+"\n"
-        screen += f"{color('31;1')}C:{color(0)} {emu.carry}\n"
+        screen += f"{color('31;1')}Z:{color(0)} {emu.zero}        {color('32;1')}next-op: "+color('33;1')+ins+color(0)
+        screen += f"    {color('31;1')}HALTED{color(0)}" if emu.halted else ""
+        screen += f"\n{color('31;1')}C:{color(0)} {emu.carry}\n"
         screen += " "*8+color('33;1')
         for i in range(16):
             screen += f"{i:01x}  "
@@ -94,6 +109,21 @@ class App:
                     screen += color(0)
                 screen += " "
             screen += "\n"
+        width = 32
+        height = 4
+        screen += "+"+"-"*width+"+\n"
+        for row in range(height):
+            screen += "|"
+            for column in range(width):
+                byte = emu.memory[0xfe00+row*width+column]
+                if 32 <= byte < 128:
+                    character = chr(byte)
+                else:
+                    character = " "
+                screen += character
+            screen += "|\n"
+        screen += "+"+"-"*width+"+\n"
+        system("clear")
         print(screen)
 
 def main():

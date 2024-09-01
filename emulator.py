@@ -104,7 +104,7 @@ class Emulator:
         R = self.registers
         high = R[A]//R[B]
         low = R[A]%R[B]
-        R[A] = (high&0xff00)>>8
+        R[A] = (high&0x00ff)
         R[B] = (low&0x00ff)
         self.carry = int(R[A] > 0)
         self.zero = int(R[B] == 0)
@@ -161,13 +161,13 @@ class Emulator:
         R = self.registers
         M = self.memory
         M[0xff00+R[0xf]] = R[A]
-        R[0xf] += 1
+        R[0xf] = (R[0xf]+1)%256
 
     def pop(self):
         A = (self.instructions[1]&0b11110000)>>4
         R = self.registers
         M = self.memory
-        R[0xf] -= 1
+        R[0xf] = (R[0xf]-1)%256
         R[A] = M[0xff00+R[0xf]]
 
     def cal(self):
@@ -177,17 +177,17 @@ class Emulator:
         high = (self.program_counter&0xff00)>>8
         low = (self.program_counter&0x00ff)
         M[0xff00+R[0xf]] = high
-        R[0xf] += 1
+        R[0xf] = (R[0xf]+1)%256
         M[0xff00+R[0xf]] = low
-        R[0xf] += 1
+        R[0xf] = (R[0xf]+1)%256
         self.program_counter = addr
 
     def ret(self):
         R = self.registers
         M = self.memory
-        R[0xf] -= 1
+        R[0xf] = (R[0xf]-1)%256
         low = M[0xff00+R[0xf]]
-        R[0xf] -= 1
+        R[0xf] = (R[0xf]-1)%256
         high = M[0xff00+R[0xf]]
         self.program_counter = (high<<0xff00)|low
 
@@ -211,6 +211,7 @@ class Emulator:
         addr = (self.instructions[1]<<8)|self.instructions[2]
         R = self.registers
         M = self.memory
+        addr = (addr+R[0xe])%65536
         R[A] = M[addr]
         self.zero = int(R[A] == 0)
 
@@ -226,6 +227,7 @@ class Emulator:
         addr = (self.instructions[1]<<8)|self.instructions[2]
         R = self.registers
         M = self.memory
+        addr = (addr+R[0xe])%65536
         M[addr] = R[A]
         self.zero = int(R[A] == 0)
 
@@ -250,7 +252,7 @@ class Emulator:
         B = (self.instructions[1]&0b00001111)
         R = self.registers
         result = R[A]-R[B]
-        self.carry = int(result >= 256)
+        self.carry = int(result < 0)
         self.zero = int((result%256) == 0)
 
     def nop(self):

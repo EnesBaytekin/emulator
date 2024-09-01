@@ -16,9 +16,9 @@ cal 01100   addr____________        S[R[0xf]]=PCh; R[0xf]++; S[R[0xf]]=PCl; R[0x
 ret 01101                           R[0xf]--; PCl=S[R[0xf]]; R[0xf]--; PCh=S[R[0xf]]
 jmp 01110   addr____________        PC=addr
 jif 01111zcsaddr____________        PC=addr; if zcs=101&&Z=1 || zcs=100&&Z=0 || zcs=011&&C=1 || zcs=010&&C=0 (zero, carry, set)
-lod 1000A___addr____________  Z     R[A]=M[addr]
+lod 1000A___addr____________  Z     R[A]=M[addr+R[0xe]]
 ldi 1001A___imm_____          Z     R[A]=imm
-sto 1010A___addr____________  Z     M[addr]=R[A]
+sto 1010A___addr____________  Z     M[addr+R[0xe]]=R[A]
 inc 10110   A___              Z, C  R[A]=R[A]+1
 dec 10111   A___              Z, C  R[A]=R[A]+1
 cmp 11000   A___B___          Z, C  R[A]-R[B]
