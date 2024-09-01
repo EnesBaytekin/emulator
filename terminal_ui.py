@@ -110,7 +110,7 @@ class App:
                 screen += " "
             screen += "\n"
         width = 32
-        height = 4
+        height = 8
         screen += "+"+"-"*width+"+\n"
         for row in range(height):
             screen += "|"

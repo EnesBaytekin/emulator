@@ -160,6 +160,12 @@ def get_address(element):
         else:
             error_line(f"Invalid address: {element}")
 
+def is_string(element):
+    return element[0] == element[-1] and element[0] == '"' and '"' not in element[1:-1]
+
+def get_string(element):
+    return element[1:-1]
+
 def compile(codes):
     global labels, file_name, line_number, line
     bytelist = []
@@ -181,7 +187,11 @@ def compile(codes):
                 elements = line.split()
                 instruction = elements.pop(0).lower()
                 if instruction == "put":
-                    addr += len(elements)
+                    if is_string(line[4:]):
+                        string = get_string(line[4:])
+                        addr += len(string)
+                    else:
+                        addr += len(elements)
                 elif instruction in [
                     "jmp","cal","jif","lod","sto"
                 ]:
@@ -211,11 +221,17 @@ def compile(codes):
                 if instruction in table:
                     bitstring += table[instruction]
                 elif instruction == "put":
-                    for element in elements:
-                        byte = get_number(element)
-                        if byte<0 or 256<=byte:
-                            error_line(f"'{byte}' is not in the range [0, 255]")
-                        bitstring += bin(byte)[2:].zfill(8)
+                    if is_string(line[4:]):
+                        string = get_string(line[4:])
+                        for c in string:
+                            byte = ord(c)
+                            bitstring += bin(byte)[2:].zfill(8)
+                    else:
+                        for element in elements:
+                            byte = get_number(element)
+                            if byte<0 or 256<=byte:
+                                error_line(f"'{byte}' is not in the range [0, 255]")
+                            bitstring += bin(byte)[2:].zfill(8)
                 else:
                     line_error("Unknown instruction.")
                 if instruction in [
