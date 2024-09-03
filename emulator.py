@@ -41,7 +41,7 @@ class Emulator:
         self.carry = 0
         self.zero = 0
         self.interrupt = 0
-        self.interrupt_enable = 1
+        self.interrupt_enable = 0
         self.instructions = array("B", [0, 0, 0])
         self.halted = False
 
@@ -49,6 +49,8 @@ class Emulator:
         self.program_counter = 0
         self.registers[0xf] = 0
         self.memory = array("B", program)+self.memory[len(program):]
+        self.interrupt = 0
+        self.interrupt_enable = 0
         self.halted = False
 
     def step(self):
@@ -61,6 +63,9 @@ class Emulator:
             self.ret,
             self.nop,
             self.hlt,
+            self.rti,
+            self.sei,
+            self.cli,
         ]:
             self.instructions[1] = self.memory[self.program_counter]
             self.program_counter += 1

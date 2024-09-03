@@ -119,7 +119,11 @@ def is_number(element):
     return (
         is_hex(element) or
         is_bin(element) or
-        is_dec(element)
+        is_dec(element) or
+        (
+            is_string(element) and
+            len(get_string(element)) == 1
+        )
     )
 
 def get_number(element):
@@ -132,6 +136,11 @@ def get_number(element):
     elif is_dec(element):
         number = element
         base = 10
+    elif is_string(element):
+        string = get_string(element)
+        if len(string) != 1:
+            error_line(f"String length must be 1")
+        return ord(string)
     else:
         error_line(f"Number expected, got: {element}")
     return int(number, base)
@@ -354,7 +363,7 @@ def compile(codes):
                     byte = int(bitstring[:8], 2)
                     bitstring = bitstring[8:]
                     bytelist.append(byte)
-    return bytes(bytelist)
+    return bytes(bytelist+array("B", [0 for i in range(2**15-(len(bytelist)))]))
 
 def main():
     if len(argv) == 1:

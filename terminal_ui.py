@@ -19,6 +19,7 @@ class App:
         if len(argv) > 1:
             file_name = argv[1]
             self.load_program(file_name)
+        self.speed = 1000
     def start(self):
         self.running = True
         self.draw()
@@ -58,6 +59,24 @@ class App:
                     self.is_auto = True
                 else:
                     self.step()
+            elif len(data) > 2 and data[:2].lower() == ".":
+                self.speed = int(data[2:])
+                if last_auto:
+                    self.is_auto = True
+                else:
+                    self.step()
+            elif data == "+":
+                self.speed = int(self.speed*3/2)
+                if last_auto:
+                    self.is_auto = True
+                else:
+                    self.step()
+            elif data == "-":
+                self.speed = int(self.speed*2/3)
+                if last_auto:
+                    self.is_auto = True
+                else:
+                    self.step()
             else:
                 self.step()
             if self.is_auto:
@@ -83,7 +102,7 @@ class App:
             dt = now-last
             timer_step += dt
             timer_draw += dt
-            if timer_step > 0.001:
+            if timer_step > 1/self.speed:
                 timer_step = 0
                 self.step()
             if timer_draw > 0.05:
@@ -128,8 +147,9 @@ class App:
         screen += f"{color('31;1')}PC:{color(0)} {emu.program_counter:04x} {file_name}\n"
         screen += f"{color('31;1')}Z:{color(0)} {emu.zero}        {color('32;1')}next-op: "+color('33;1')+ins+color(0)
         screen += f"    {color('31;1')}HALTED{color(0)}" if emu.halted else ""
-        screen += f"\n{color('31;1')}C:{color(0)} {emu.carry}\n"
-        screen += " "*8+color('33;1')
+        screen += f"\n{color('31;1')}C:{color(0)} {emu.carry}"
+        screen += f"\n{color('31;1')}IE:{color(0)} {emu.interrupt_enable}"
+        screen += "\n"+" "*8+color('33;1')
         for i in range(16):
             screen += f"{i:01x}  "
         screen += f"\n{color('31;1')}regs  : "+color(0)
