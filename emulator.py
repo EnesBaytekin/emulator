@@ -30,6 +30,9 @@ class Emulator:
         elif ins == 0b11001: return self.nop
         elif ins == 0b11010: return self.hlt
         elif ins == 0b11011: return self.mov
+        elif ins == 0b11100: return self.rti
+        elif ins == 0b11101: return self.sei
+        elif ins == 0b11110: return self.cli
 
     def __init__(self):
         self.program_counter = 0
@@ -37,6 +40,8 @@ class Emulator:
         self.memory = array("B", [0]*65536)
         self.carry = 0
         self.zero = 0
+        self.interrupt = 0
+        self.interrupt_enable = 1
         self.instructions = array("B", [0, 0, 0])
         self.halted = False
 
@@ -50,7 +55,7 @@ class Emulator:
         if self.halted:
             return
         self.instructions[0] = self.memory[self.program_counter]
-        self.program_counter += 1
+        self.program_counter = (self.program_counter+1)&0xffff
         function = self.get_function((self.instructions[0]&0b11111000)>>3)
         if function not in [
             self.ret,
@@ -69,6 +74,22 @@ class Emulator:
                 self.instructions[2] = self.memory[self.program_counter]
                 self.program_counter += 1
         function()
+        if self.interrupt == 1 and self.interrupt_enable == 1:
+            R = self.registers
+            M = self.memory
+            c = self.carry
+            z = self.zero
+            F = (z<<1)|c
+            PC = self.program_counter
+            M[0xff00+R[0xf]] = (PC&0xff00)>>8
+            R[0xf] = (R[0xf]+1)&0xff
+            M[0xff00+R[0xf]] = PC&0x00ff
+            R[0xf] = (R[0xf]+1)&0xff
+            M[0xff00+R[0xf]] = F
+            R[0xf] = (R[0xf]+1)&0xff
+            addr = (M[0x7ffe]<<8)|M[0x7fff]
+            self.program_counter = addr
+            self.interrupt_enable = 0
 
     def add(self):
         A = (self.instructions[1]&0b11110000)>>4
@@ -76,7 +97,7 @@ class Emulator:
         R = self.registers
         result = R[A]+R[B]
         self.carry = int(result >= 256)
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def sub(self):
@@ -85,7 +106,7 @@ class Emulator:
         R = self.registers
         result = R[A]-R[B]
         self.carry = int(result < 0)
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def mul(self):
@@ -114,7 +135,7 @@ class Emulator:
         R = self.registers
         result = R[A]<<1
         self.carry = (R[A]&0b10000000)>>7
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def shr(self):
@@ -122,7 +143,7 @@ class Emulator:
         R = self.registers
         result = R[A]>>1
         self.carry = (R[A]&0b00000001)
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def and_(self):
@@ -130,7 +151,7 @@ class Emulator:
         B = (self.instructions[1]&0b00001111)
         R = self.registers
         result = R[A]&R[B]
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def orr(self):
@@ -138,7 +159,7 @@ class Emulator:
         B = (self.instructions[1]&0b00001111)
         R = self.registers
         result = R[A]|R[B]
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def xor(self):
@@ -146,14 +167,14 @@ class Emulator:
         B = (self.instructions[1]&0b00001111)
         R = self.registers
         result = R[A]^R[B]
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def not_(self):
         A = (self.instructions[1]&0b11110000)>>4
         R = self.registers
         result = ~R[A]
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def psh(self):
@@ -161,13 +182,13 @@ class Emulator:
         R = self.registers
         M = self.memory
         M[0xff00+R[0xf]] = R[A]
-        R[0xf] = (R[0xf]+1)%256
+        R[0xf] = (R[0xf]+1)&0xff
 
     def pop(self):
         A = (self.instructions[1]&0b11110000)>>4
         R = self.registers
         M = self.memory
-        R[0xf] = (R[0xf]-1)%256
+        R[0xf] = (R[0xf]-1)&0xff
         R[A] = M[0xff00+R[0xf]]
 
     def cal(self):
@@ -177,19 +198,19 @@ class Emulator:
         high = (self.program_counter&0xff00)>>8
         low = (self.program_counter&0x00ff)
         M[0xff00+R[0xf]] = high
-        R[0xf] = (R[0xf]+1)%256
+        R[0xf] = (R[0xf]+1)&0xff
         M[0xff00+R[0xf]] = low
-        R[0xf] = (R[0xf]+1)%256
+        R[0xf] = (R[0xf]+1)&0xff
         self.program_counter = addr
 
     def ret(self):
         R = self.registers
         M = self.memory
-        R[0xf] = (R[0xf]-1)%256
+        R[0xf] = (R[0xf]-1)&0xff
         low = M[0xff00+R[0xf]]
-        R[0xf] = (R[0xf]-1)%256
+        R[0xf] = (R[0xf]-1)&0xff
         high = M[0xff00+R[0xf]]
-        self.program_counter = (high<<0xff00)|low
+        self.program_counter = (high<<8)|low
 
     def jmp(self):
         addr = (self.instructions[1]<<8)|self.instructions[2]
@@ -236,7 +257,7 @@ class Emulator:
         R = self.registers
         result = R[A]+1
         self.carry = int(result >= 256)
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def dec(self):
@@ -244,7 +265,7 @@ class Emulator:
         R = self.registers
         result = R[A]-1
         self.carry = int(result < 0)
-        R[A] = (result)%256
+        R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def cmp(self):
@@ -253,7 +274,7 @@ class Emulator:
         R = self.registers
         result = R[A]-R[B]
         self.carry = int(result < 0)
-        self.zero = int((result%256) == 0)
+        self.zero = int((result&0xff) == 0)
 
     def nop(self):
         pass
@@ -266,4 +287,25 @@ class Emulator:
         B = (self.instructions[1]&0b00001111)
         R = self.registers
         R[B] = R[A]
+
+    def rti(self):
+        R = self.registers
+        M = self.memory
+        R[0xf] = (R[0xf]-1)&0xff
+        F = M[0xff00+R[0xf]]
+        self.zero = (F&0b00000010)>>1
+        self.carry = F&0b00000001
+        R[0xf] = (R[0xf]-1)&0xff
+        low = M[0xff00+R[0xf]]
+        R[0xf] = (R[0xf]-1)&0xff
+        high = M[0xff00+R[0xf]]
+        self.program_counter = (high<<8)|low
+        self.interrupt = 0
+        self.interrupt_enable = 1
+
+    def sei(self):
+        self.interrupt_enable = 1
+
+    def cli(self):
+        self.interrupt_enable = 0
 

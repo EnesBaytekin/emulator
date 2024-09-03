@@ -14,6 +14,7 @@ class App:
         self.m_origin = 0
         self.s_origin = 0xff00
         self.is_auto = False
+        self.has_thread = False
         self.current_file_name = ""
         if len(argv) > 1:
             file_name = argv[1]
@@ -21,9 +22,14 @@ class App:
     def start(self):
         self.running = True
         self.draw()
+        last_auto = self.is_auto
         while self.running:
             data = input("> ")
+            last_auto = self.is_auto
             self.is_auto = False
+            if data == "":
+                if last_auto:
+                    data = "i"
             if data == "q":
                 self.running = False
             elif len(data) > 1 and data[0].lower() in "ms":
@@ -46,11 +52,24 @@ class App:
                 self.load_program(self.current_file_name)
             elif len(data) == 1 and data.lower() == "a":
                 self.is_auto = True
-                start_new_thread(self.auto, ())
+            elif data == "i":
+                self.emulator.interrupt = 1
+                if last_auto:
+                    self.is_auto = True
+                else:
+                    self.step()
             else:
                 self.step()
-            self.draw()
+            if self.is_auto:
+                self.start_auto()
+            else:
+                self.draw()
+    def start_auto(self):
+        if self.has_thread:
+            return
+        start_new_thread(self.auto, ())
     def auto(self):
+        self.has_thread = True
         last = 0
         now = 0
         timer_step = 0
@@ -58,6 +77,7 @@ class App:
         while self.is_auto:
             if self.emulator.halted:
                 self.is_auto = False
+                break
             last = now
             now = time()
             dt = now-last
@@ -70,6 +90,7 @@ class App:
                 timer_draw = 0
                 self.draw()
         self.draw()
+        self.has_thread = False
     def step(self):
         self.emulator.step()
         pc = (self.emulator.program_counter>>4)<<4
@@ -80,7 +101,7 @@ class App:
         sp = (self.emulator.registers[0xf]>>4)<<4
         if sp-self.s_origin >= 2*0x0010:
             self.focus_stack_address(sp-1*0x0010)
-        elif sp -self.s_origin < 0:
+        elif sp-self.s_origin < 0:
             self.focus_stack_address(sp)
     def load_program(self, file_name):
         try:

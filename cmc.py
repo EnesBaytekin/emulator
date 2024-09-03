@@ -1,4 +1,5 @@
 from sys import argv, stderr
+from array import array
 
 table = {
   "add": "00000",
@@ -26,6 +27,9 @@ table = {
   "nop": "11001",
   "hlt": "11010",
   "mov": "11011",
+  "rti": "11100",
+  "sei": "11101",
+  "cli": "11110",
 }
 
 def error(msg, code=1):
@@ -168,8 +172,8 @@ def get_string(element):
 
 def compile(codes):
     global labels, file_name, line_number, line
-    bytelist = []
-    addr = 0
+    bytelist = array("B", [])
+    pc_addr = 0
     labels = {}
     for file_name, code in codes.items():
         lines = [line for line in code.split("\n")]
@@ -182,31 +186,38 @@ def compile(codes):
                 label = line[1:]
                 if label in labels:
                     error_line(f"Redefinition of label: {label}")
-                labels[label] = addr
+                labels[label] = pc_addr
             else:
                 elements = line.split()
                 instruction = elements.pop(0).lower()
                 if instruction == "put":
                     if is_string(line[4:]):
                         string = get_string(line[4:])
-                        addr += len(string)
+                        pc_addr += len(string)
                     else:
-                        addr += len(elements)
+                        pc_addr += len(elements)
+                elif instruction == "go":
+                    if len(elements) != 1:
+                        error_line(f"Give an address after 'go' statement.")
+                    addr = get_address(elements[0])
+                    if addr<0 or 65535<addr:
+                        error_line(f"'{addr}' is not in the range [0, 65535]")
+                    pc_addr = addr
                 elif instruction in [
                     "jmp","cal","jif","lod","sto"
                 ]:
-                    addr += 3
+                    pc_addr += 3
                 elif instruction in [
                     "add","sub","mul","div",
                     "and","orr","xor","cmp","mov",
                     "shl","shr","not",
                     "psh","pop","inc","dec","ldi"
                 ]:
-                    addr += 2
+                    pc_addr += 2
                 elif instruction in [
-                    "ret","nop","hlt"
+                    "ret","nop","hlt","rti","sei","cli"
                 ]:
-                    addr += 1
+                    pc_addr += 1
     for file_name, code in codes.items():
         lines = [line for line in code.split("\n")]
         for line_number, line in enumerate(lines, 1):
@@ -221,7 +232,10 @@ def compile(codes):
                 if instruction in table:
                     bitstring += table[instruction]
                 elif instruction == "put":
-                    if is_string(line[4:]):
+                    if is_label(line[4:]):
+                        addr = get_address(line[4:])
+                        bitstring += bin(addr)[2:].zfill(16)
+                    elif is_string(line[4:]):
                         string = get_string(line[4:])
                         for c in string:
                             byte = ord(c)
@@ -232,8 +246,19 @@ def compile(codes):
                             if byte<0 or 256<=byte:
                                 error_line(f"'{byte}' is not in the range [0, 255]")
                             bitstring += bin(byte)[2:].zfill(8)
+                elif instruction == "go":
+                    addr = get_address(elements[0])
+                    if addr<0 or 65535<addr:
+                        error_line(f"'{addr}' is not in the range [0, 65535]")
+                    while len(bitstring) > 0:
+                        byte = int(bitstring[:8], 2)
+                        bitstring = bitstring[8:]
+                        bytelist.append(byte)
+
+                    while len(bytelist) < addr:
+                        bytelist.append(0)
                 else:
-                    line_error("Unknown instruction.")
+                    error_line("Unknown instruction.")
                 if instruction in [
                     "jmp","cal"
                 ]:
@@ -320,7 +345,7 @@ def compile(codes):
                     bitstring += bin(reg_index)[2:].zfill(4)
                     bitstring += "0000"
                 elif instruction in [
-                    "ret","nop","hlt"
+                    "ret","nop","hlt","rti","sei","cli"
                 ]:
                     bitstring += "000"
                     if len(elements) != 0:
@@ -347,9 +372,20 @@ def main():
                 error("No output name given after -o")
         code = get_input(files)
         bytecode = compile(code)
+        last_line = []
+        line_bytes = []
+        changed = True
         for line in range(len(bytecode)//16+1):
-            print(f"{hex(line)[2:].zfill(4)}:", end=" ")
-            for byte in bytecode[line*16:line*16+16]:
+            last_line = line_bytes
+            line_bytes = bytecode[line*16:line*16+16]
+            if line_bytes == last_line:
+                if changed:
+                    print("...")
+                changed = False
+                continue
+            changed = True
+            print(f"{hex(line<<4)[2:].zfill(4)}:", end=" ")
+            for byte in line_bytes:
                 print(hex(byte)[2:].zfill(2), end=" ")
             print()
         with open(output_name, "wb") as file:

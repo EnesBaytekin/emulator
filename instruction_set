@@ -25,7 +25,12 @@ cmp 11000   A___B___          Z, C  R[A]-R[B]
 nop 11001                  
 hlt 11010                  
 mov 11011   A___B___                R[B]=R[A]
+rti 11100                     Z, C  R[0xf]--; F=S[R[0xf]]; R[0xf]--; PCl=S[R[0xf]]; R[0xf]--; PCh=S[R[0xf]];
+sei 11101                           IE=1
+cli 11110                           IE=0
 
+interrupt enable bit
+IE
 F 8-bit flags register
 F -> [ (6) | Z | C ]
 PC 16-bit program counter
