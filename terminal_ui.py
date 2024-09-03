@@ -1,6 +1,8 @@
 from emulator import Emulator
 from os import system
 from sys import argv
+from _thread import start_new_thread
+from time import time, sleep
 
 def color(number):
     return f"\033[{number}m"
@@ -11,6 +13,7 @@ class App:
         self.running = False
         self.m_origin = 0
         self.s_origin = 0xff00
+        self.is_auto = False
         self.current_file_name = ""
         if len(argv) > 1:
             file_name = argv[1]
@@ -20,6 +23,7 @@ class App:
         self.draw()
         while self.running:
             data = input("> ")
+            self.is_auto = False
             if data == "q":
                 self.running = False
             elif len(data) > 1 and data[0].lower() in "ms":
@@ -40,19 +44,44 @@ class App:
                 self.load_program(file_name)
             elif len(data) == 1 and data.lower() == "r":
                 self.load_program(self.current_file_name)
+            elif len(data) == 1 and data.lower() == "a":
+                self.is_auto = True
+                start_new_thread(self.auto, ())
             else:
-                self.emulator.step()
-                pc = (self.emulator.program_counter>>4)<<4
-                if pc-self.m_origin >= 4*0x0010:
-                    self.focus_memory_address(pc-3*0x0010)
-                elif pc -self.m_origin < 0:
-                    self.focus_memory_address(pc)
-                sp = (self.emulator.registers[0xf]>>4)<<4
-                if sp-self.s_origin >= 2*0x0010:
-                    self.focus_stack_address(sp-1*0x0010)
-                elif sp -self.s_origin < 0:
-                    self.focus_stack_address(sp)
+                self.step()
             self.draw()
+    def auto(self):
+        last = 0
+        now = 0
+        timer_step = 0
+        timer_draw = 0
+        while self.is_auto:
+            if self.emulator.halted:
+                self.is_auto = False
+            last = now
+            now = time()
+            dt = now-last
+            timer_step += dt
+            timer_draw += dt
+            if timer_step > 0.001:
+                timer_step = 0
+                self.step()
+            if timer_draw > 0.05:
+                timer_draw = 0
+                self.draw()
+        self.draw()
+    def step(self):
+        self.emulator.step()
+        pc = (self.emulator.program_counter>>4)<<4
+        if pc-self.m_origin >= 4*0x0010:
+            self.focus_memory_address(pc-3*0x0010)
+        elif pc -self.m_origin < 0:
+            self.focus_memory_address(pc)
+        sp = (self.emulator.registers[0xf]>>4)<<4
+        if sp-self.s_origin >= 2*0x0010:
+            self.focus_stack_address(sp-1*0x0010)
+        elif sp -self.s_origin < 0:
+            self.focus_stack_address(sp)
     def load_program(self, file_name):
         try:
             with open(file_name, "rb") as file:
