@@ -379,8 +379,9 @@ def main():
                 files.pop(index)
             else:
                 error("No output name given after -o")
-        code = get_input(files)
-        bytecode = compile(code)
+        codes = get_input(files)
+        codes = {name: "\n".join([line.split(";")[0] for line in code.split("\n")]) for name, code in codes.items()}
+        bytecode = compile(codes)
         last_line = []
         line_bytes = []
         changed = True

@@ -54,7 +54,7 @@ class App:
             elif len(data) == 1 and data.lower() == "a":
                 self.is_auto = True
             elif data == "i":
-                self.emulator.interrupt = 1
+                self.emulator.set_interrupt()
                 if last_auto:
                     self.is_auto = True
                 else:

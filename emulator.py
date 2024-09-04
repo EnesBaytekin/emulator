@@ -96,6 +96,10 @@ class Emulator:
             self.program_counter = addr
             self.interrupt_enable = 0
 
+    def set_interrupt(self):
+        if self.interrupt_enable:
+            self.interrupt = 1
+
     def add(self):
         A = (self.instructions[1]&0b11110000)>>4
         B = (self.instructions[1]&0b00001111)
