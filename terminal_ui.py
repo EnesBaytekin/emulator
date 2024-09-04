@@ -30,8 +30,8 @@ class App:
             self.is_auto = False
             if data == "":
                 if last_auto:
-                    data = "i"
-            if data == "q":
+                    data = ".i"
+            if data == ".q":
                 self.running = False
             elif len(data) > 1 and data[0].lower() in "ms":
                 for c in data[1:]:
@@ -49,12 +49,13 @@ class App:
             elif len(data) > 2 and data[:2].lower() == "o ":
                 file_name = data[2:].strip()
                 self.load_program(file_name)
-            elif len(data) == 1 and data.lower() == "r":
+            elif len(data) == 2 and data.lower() == ".r":
                 self.load_program(self.current_file_name)
-            elif len(data) == 1 and data.lower() == "a":
+            elif len(data) == 2 and data.lower() == ".a":
                 self.is_auto = True
-            elif data == "i":
+            elif len(data) == 1:
                 self.emulator.set_interrupt()
+                self.emulator.memory[0x7ffd] = ord(data)&0xff
                 if last_auto:
                     self.is_auto = True
                 else:
