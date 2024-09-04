@@ -1,8 +1,8 @@
 from emulator import Emulator
-from os import system
 from sys import argv
 from _thread import start_new_thread
 from time import time, sleep
+from utils import get_character, clear_terminal
 
 def color(number):
     return f"\033[{number}m"
@@ -28,18 +28,29 @@ class App:
             data = input("> ")
             last_auto = self.is_auto
             self.is_auto = False
-            if data == "":
-                if last_auto:
-                    data = ".i"
-            if data == ".q":
+            if data == "q":
                 self.running = False
             elif len(data) > 1 and data[0].lower() in "ms":
+                if data[1:] in ("+", "-"):
+                    if data[0].lower() =="m":
+                        if data[1:] == "+":
+                            addr = (self.m_origin+16)&0xffff
+                        elif data[1:] == "-":
+                            addr = (self.m_origin-16)&0xffff
+                        self.focus_memory_address(addr)
+                    elif data[0].lower() == "s":
+                        if data[1:] == "+":
+                            addr = (self.s_origin+16)&0xffff
+                        elif data[1:] == "-":
+                            addr = (self.s_origin-16)&0xffff
+                        else:
+                            addr = int(data[1:], 16)
+                        self.focus_stack_address(addr)
                 for c in data[1:]:
                     if c.lower() not in "0123456789abcdef":
                         break
                 else:
                     if data[0].lower() == "m":
-                        addr = int(data[1:], 16)
                         if 0 <= addr < 65536:
                             self.focus_memory_address(addr)
                     elif data[0].lower() == "s":
@@ -49,19 +60,12 @@ class App:
             elif len(data) > 2 and data[:2].lower() == "o ":
                 file_name = data[2:].strip()
                 self.load_program(file_name)
-            elif len(data) == 2 and data.lower() == ".r":
+            elif len(data) == 1 and data.lower() == "r":
                 self.load_program(self.current_file_name)
-            elif len(data) == 2 and data.lower() == ".a":
+            elif len(data) == 1 and data.lower() == "a":
                 self.is_auto = True
-            elif len(data) == 1:
-                self.emulator.set_interrupt()
-                self.emulator.memory[0x7ffd] = ord(data)&0xff
-                if last_auto:
-                    self.is_auto = True
-                else:
-                    self.step()
-            elif len(data) > 2 and data[:2].lower() == ".":
-                self.speed = int(data[2:])
+            elif len(data) > 1 and data[0].lower() == "." and data[1:].isdigit():
+                self.speed = int(data[1:])
                 if last_auto:
                     self.is_auto = True
                 else:
@@ -85,11 +89,6 @@ class App:
             else:
                 self.draw()
     def start_auto(self):
-        if self.has_thread:
-            return
-        start_new_thread(self.auto, ())
-    def auto(self):
-        self.has_thread = True
         last = 0
         now = 0
         timer_step = 0
@@ -101,6 +100,15 @@ class App:
             last = now
             now = time()
             dt = now-last
+            char = get_character()
+            if char is not None:
+                if char == "\x03":
+                    self.is_auto = False
+                    break
+                if char == "":
+                    char = " "
+                self.emulator.set_interrupt()
+                self.emulator.memory[0x8000] = ord(char)&0xff
             timer_step += dt
             timer_draw += dt
             if timer_step > 1/self.speed:
@@ -110,7 +118,6 @@ class App:
                 timer_draw = 0
                 self.draw()
         self.draw()
-        self.has_thread = False
     def step(self):
         self.emulator.step()
         pc = (self.emulator.program_counter>>4)<<4
@@ -148,7 +155,7 @@ class App:
         screen += f"{color('31;1')}PC:{color(0)} {emu.program_counter:04x} {file_name}\n"
         screen += f"{color('31;1')}Z:{color(0)} {emu.zero}        {color('32;1')}next-op: "+color('33;1')+ins+color(0)
         screen += f"    {color('31;1')}HALTED{color(0)}" if emu.halted else ""
-        screen += f"\n{color('31;1')}C:{color(0)} {emu.carry}"
+        screen += f"\n{color('31;1')}C:{color(0)} {emu.carry}"+" "*36+f"speed: {self.speed}".rjust(15)
         screen += f"\n{color('31;1')}IE:{color(0)} {emu.interrupt_enable}"
         screen += "\n"+" "*8+color('33;1')
         for i in range(16):
@@ -194,7 +201,9 @@ class App:
                 screen += character
             screen += "|\n"
         screen += "+"+"-"*width+"+\n"
-        system("clear")
+        if self.is_auto:
+            screen += "Auto mode is active. Ctrl+C to exit."
+        clear_terminal()
         print(screen)
 
 def main():
