@@ -204,7 +204,11 @@ def compile(codes):
                         string = get_string(line[4:])
                         pc_addr += len(string)
                     else:
-                        pc_addr += len(elements)
+                        for element in elements:
+                            if is_number(element):
+                                pc_addr += 1
+                            else:
+                                pc_addr += 2
                 elif instruction == "go":
                     if len(elements) != 1:
                         error_line(f"Give an address after 'go' statement.")
