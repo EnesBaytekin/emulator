@@ -37,6 +37,8 @@ class App:
                             addr = (self.m_origin+16)&0xffff
                         elif data[1:] == "-":
                             addr = (self.m_origin-16)&0xffff
+                        else:
+                            addr = self.m_origin
                         self.focus_memory_address(addr)
                     elif data[0].lower() == "s":
                         if data[1:] == "+":
@@ -44,13 +46,14 @@ class App:
                         elif data[1:] == "-":
                             addr = (self.s_origin-16)&0xffff
                         else:
-                            addr = int(data[1:], 16)
+                            addr = self.s_origin
                         self.focus_stack_address(addr)
                 for c in data[1:]:
                     if c.lower() not in "0123456789abcdef":
                         break
                 else:
                     if data[0].lower() == "m":
+                        addr = int(data[1:], 16)
                         if 0 <= addr < 65536:
                             self.focus_memory_address(addr)
                     elif data[0].lower() == "s":
@@ -64,7 +67,11 @@ class App:
                 self.load_program(self.current_file_name)
             elif len(data) == 1 and data.lower() == "a":
                 self.is_auto = True
-            elif len(data) > 1 and data[0].lower() == "." and data[1:].isdigit():
+            elif len(data) == 2 and data[0] == ",":
+                self.set_interrupt(ord(data[1])&0xff)
+            elif len(data) > 1 and data[0] == "." and data[1:].isdigit() and 0<=int(data[1:])<256:
+                self.set_interrupt(int(data[1:])&0xff)
+            elif len(data) > 1 and data[0] == ":" and data[1:].isdigit():
                 self.speed = int(data[1:])
                 if last_auto:
                     self.is_auto = True
@@ -88,6 +95,10 @@ class App:
                 self.start_auto()
             else:
                 self.draw()
+    def set_interrupt(self, value):
+        if self.emulator.interrupt_enable:
+            self.emulator.set_interrupt()
+            self.emulator.memory[0x8000] = value
     def start_auto(self):
         last = 0
         now = 0
@@ -107,8 +118,7 @@ class App:
                     break
                 if char == "":
                     char = " "
-                self.emulator.set_interrupt()
-                self.emulator.memory[0x8000] = ord(char)&0xff
+                self.set_interrupt(ord(char)&0xff)
             timer_step += dt
             timer_draw += dt
             if timer_step > 1/self.speed:

@@ -141,16 +141,18 @@ class Emulator:
 
     def shl(self):
         A = (self.instructions[1]&0b11110000)>>4
+        o = (self.instructions[1]&0b00000111)
         R = self.registers
-        result = R[A]<<1
+        result = R[A]<<o
         self.carry = (R[A]&0b10000000)>>7
         R[A] = (result)&0xff
         self.zero = int(R[A] == 0)
 
     def shr(self):
         A = (self.instructions[1]&0b11110000)>>4
+        o = (self.instructions[1]&0b00000111)
         R = self.registers
-        result = R[A]>>1
+        result = R[A]>>o
         self.carry = (R[A]&0b00000001)
         R[A] = (result)&0xff
         self.zero = int(R[A] == 0)

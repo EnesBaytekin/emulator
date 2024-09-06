@@ -4,8 +4,8 @@ add 00000   A___B___          Z, C  R[A]=R[A]+R[B]
 sub 00001   A___B___          Z, C  R[A]=R[A]-R[B]
 mul 00010   A___B___          Z, C  tmp=R[A]*R[B]; R[A]=tmp[H]; R[B]=tmp[L]
 div 00011   A___B___          Z, C  tmp=R[A]/R[B]; R[A]=tmp[H]; R[B]=tmp[L]
-shl 00100   A___              Z, C  R[A]=R[A]<<1
-shr 00101   A___              Z, C  R[A]=R[A]>>1
+shl 00100   A___ o__          Z, C  R[A]=R[A]<<o
+shr 00101   A___ o__          Z, C  R[A]=R[A]>>o
 and 00110   A___B___          Z     R[A]=R[A]&R[B]
 orr 00111   A___B___          Z     R[A]=R[A]|R[B]
 xor 01000   A___B___          Z     R[A]=R[A]^R[B]

@@ -347,8 +347,7 @@ def compile(codes):
                         reg_index = get_register(element)
                         bitstring += bin(reg_index)[2:].zfill(4)
                 elif instruction in [
-                    "shl","shr","not",
-                    "psh","pop","inc","dec"
+                    "not","psh","pop","inc","dec"
                 ]:
                     bitstring += "000"
                     if len(elements) != 1:
@@ -357,6 +356,19 @@ def compile(codes):
                     reg_index = get_register(element)
                     bitstring += bin(reg_index)[2:].zfill(4)
                     bitstring += "0000"
+                elif instruction in [
+                    "shl","shr"
+                ]:
+                    bitstring += "000"
+                    if len(elements) != 2:
+                        error_line(f"'{instruction}' takes 2 arguments, {len(elements)} given.")
+                    reg_index = get_register(elements[0])
+                    bitstring += bin(reg_index)[2:].zfill(4)
+                    bitstring += "0"
+                    value = get_number(elements[1])
+                    if value<1 or value>8:
+                        error_line("Second argument must be in range [1, 8]")
+                    bitstring += bin(value)[2:].zfill(3)
                 elif instruction in [
                     "ret","nop","hlt","rti","sei","cli"
                 ]:
