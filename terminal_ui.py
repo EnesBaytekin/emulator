@@ -1,6 +1,5 @@
 from emulator import Emulator
 from sys import argv
-from _thread import start_new_thread
 from time import time, sleep
 from utils import get_character, clear_terminal
 
@@ -14,7 +13,6 @@ class App:
         self.m_origin = 0
         self.s_origin = 0xff00
         self.is_auto = False
-        self.has_thread = False
         self.current_file_name = ""
         if len(argv) > 1:
             file_name = argv[1]
