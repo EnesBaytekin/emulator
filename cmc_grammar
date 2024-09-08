@@ -1,0 +1,54 @@
+program
+  : statement new_line program
+  | 
+
+new_line
+  : LINE new_line
+  | LINE
+
+statement
+  : LABEL
+  | instruction
+  | GO NUM
+  | PUT data
+
+data
+  : NUM
+  | NUM data
+  | STR
+  | STR data
+  | WORD
+
+instruction
+  : ADD REG REG
+  | SUB REG REG
+  | MUL REG REG
+  | DIV REG REG
+  | SHL REG NUM
+  | SHR REG NUM
+  | AND REG REG
+  | ORR REG REG
+  | XOR REG REG
+  | NOT REG
+  | PSH REG
+  | POP REG
+  | CAL address
+  | RET
+  | JMP address
+  | JIF FLAG NUM address
+  | LOD REG address
+  | LDI REG NUM
+  | STO REG address
+  | INC REG
+  | DEC REG
+  | CMP REG REG
+  | NOP
+  | HLT
+  | MOV REG REG
+  | RTI
+  | SEI
+  | CLI
+
+address
+  : WORD
+  : NUM
