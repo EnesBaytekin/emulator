@@ -104,11 +104,13 @@ def tokenize(code):
                 elif is_reg(value):
                     token = Token("REG", value)
                 elif value in instruction_table:
-                    token = Token("INS", value)
+                    token = Token(value.upper(), value)
                 elif value == "go":
                     token = Token("GO", value)
                 elif value == "put":
                     token = Token("PUT", value)
+                elif value in ("z", "c"):
+                    token = Token("FLAG", value)
                 else:
                     token = Token("WORD", value)
                 tokens.append(token)
