@@ -1,5 +1,6 @@
 from sys import argv
 from cmc_parser import Parser
+from cmc_nodes import Node
 
 instruction_table = {
   "add": "00000",
@@ -146,11 +147,12 @@ def main():
     tokens = tokenize(code)
     parser = Parser(tokens)
     parse_tree = parser.parse()
+    Node.reset()
     program = parse_tree.get()
-    from json import loads, dumps
-    dicts = loads(program)
-    prog = dumps(dicts, indent=2)
-    print(prog)
+    print(Node.backpatch_list)
+    program = Node.fix_addresses(program)
+    print(Node.label_addresses)
+    print(program)
 
 if __name__ == "__main__":
     main()

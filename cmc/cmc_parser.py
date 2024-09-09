@@ -92,10 +92,10 @@ class Parser:
             index_checkpoint_a = self.index
             _2 = self.parse_data()
             if _2 is not None:
-                return NodeData2(_1, _2)
+                return NodeData4(_1, _2)
             
             self.index = index_checkpoint_a
-            return NodeData1(_1)
+            return NodeData3(_1)
 
         self.index = index_checkpoint
         index_checkpoint = self.index

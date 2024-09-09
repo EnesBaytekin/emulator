@@ -1,31 +1,43 @@
+from array import array
+from sys import stderr
 
+def error(msg, exit_code=1):
+    print("\033[31mError:\033[0m", msg, file=stderr)
+    exit(exit_code)
 
 class Node:
+    label_addresses = {}
+    backpatch_list = {}
+    address = 0
+    @classmethod
+    def reset(cls):
+        cls.label_addresses = {}
+        cls.backpatch_list = {}
+        cls.address = 0
+    @classmethod
+    def get_label(cls, label):
+        if label in cls.label_addresses:
+            return cls.label_addresses[label]
+        cls.backpatch_list[cls.address] = label
+        return 0
+    @classmethod
+    def fix_addresses(cls, program):
+        for ins_addr, label in cls.backpatch_list.items():
+            label_addr = cls.label_addresses[label]
+            addrH = (label_addr&0xff00)>>8
+            addrL = label_addr&0x00ff
+            program[ins_addr] = addrH
+            program[ins_addr+1] = addrL
+        return program
+    
     def __init__(self, _type, *children):
         self.type = _type
         self.children = children
     def get(self):
-        result = ""
-        result += "{\"type\":\""
-        result += self.type
-        result += "\",\"children\":"
-        if len(self.children) == 0:
-            result += "null"
-        else:
-            result += "["
-            for index, child in enumerate(self.children):
-                if isinstance(child, Node):
-                    result += child.get()
-                else:
-                    result += "["
-                    result += repr(child.type).replace("'", "\"")
-                    result += ","
-                    result += repr(child.value).replace("'", "\"")
-                    result += "]"
-                if index < len(self.children)-1:
-                    result += ","
-            result += "]"
-        result += "}"
+        result = array("B", [])
+        for child in self.children:
+            if isinstance(child, Node):
+                result.extend(child.get())
         return result
 
 ## PROGRAM ##
@@ -53,6 +65,9 @@ class NodeNewLine2(Node):
 class NodeStatement1(Node):
     def __init__(self, label):
         super().__init__("statement", label)
+    def get(self):
+        Node.label_addresses[self.children[0].value] = Node.address
+        return super().get()
 
 class NodeStatement2(Node):
     def __init__(self, instruction):
@@ -61,32 +76,79 @@ class NodeStatement2(Node):
 class NodeStatement3(Node):
     def __init__(self, go, num):
         super().__init__("statement", go, num)
+    def get(self):
+        number = self.children[1].value
+        if number < 0 or number >= 65536:
+            error("Adress value must be in range [0, 65535]")
+        Node.address = number
+        return super().get()
 
 class NodeStatement4(Node):
     def __init__(self, put, data):
         super().__init__("statement", put, data)
+    def get(self):
+        result = self.children[1].get()
+        Node.address += len(result)
+        return result
 
 ## DATA ##
 
 class NodeData1(Node):
     def __init__(self, num):
         super().__init__("data", num)
+    def get(self):
+        number = self.children[0].value
+        if number < 0 or number >= 256:
+            error("Numbers after 'put' must be in range [0, 255]")
+        return array("B", [number])
 
 class NodeData2(Node):
     def __init__(self, num, data):
         super().__init__("data", num, data)
+        number = self.children[0].value
+        if number < 0 or number >= 256:
+            error("Numbers after 'put' must be in range [0, 255]")
+        result = array("B", [number])
+        result += self.children[0].get()
+        return result
 
 class NodeData3(Node):
     def __init__(self, str):
         super().__init__("data", str)
+    def get(self):
+        result = array("B", [])
+        string = self.children[0].value
+        for char in string:
+            byte = ord(char)
+            if byte >= 256:
+                error("String characters must be one byte (ascii)")
+            result.append(byte)
+        return result
 
 class NodeData4(Node):
     def __init__(self, str, data):
         super().__init__("data", str, data)
+    def get(self):
+        result = array("B", [])
+        string = self.children[0].value
+        for char in string:
+            byte = ord(char)
+            if byte >= 256:
+                error("String characters must be one byte (ascii)")
+            result.append(byte)
+        result += self.children[1].get()
+        return result
 
 class NodeData5(Node):
     def __init__(self, word):
         super().__init__("data", word)
+    def get(self):
+        label = self.children[0].value
+        addr = Node.get_label(label)
+        addrH = (addr&0xff00)>>8
+        addrL = addr&0x00ff
+        result = array("B", [addrH, addrL])
+        return result
 
 ## BYTE ##
 
