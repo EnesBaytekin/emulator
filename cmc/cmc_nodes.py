@@ -92,6 +92,14 @@ class NodeStatement4(Node):
     def get(self):
         self.children[1].get()
 
+class NodeStatement5(Node):
+    def __init__(self, word, eq, data):
+        super().__init__("statement", word, eq, data)
+    def get(self):
+        word = self.children[0].value
+        Node.label_addresses[word] = Node.address
+        self.children[2].get()
+
 ## DATA ##
 
 class NodeData1(Node):

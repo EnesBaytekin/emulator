@@ -70,6 +70,16 @@ class Parser:
             if _2 is not None:
                 return NodeStatement4(_1, _2)
     
+        self.index = index_checkpoint
+        index_checkpoint = self.index
+        _1 = self.match("WORD")
+        if _1 is not None:
+            _2 = self.match("EQ")
+            if _2 is not None:
+                _3 = self.parse_data()
+                if _3 is not None:
+                    return NodeStatement5(_1, _2, _3)
+    
     def parse_data(self):
         
         index_checkpoint = self.index

@@ -11,6 +11,7 @@ statement
   | instruction
   | GO NUM
   | PUT data
+  | WORD EQ data
 
 data
   : NUM
