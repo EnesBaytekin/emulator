@@ -56,4 +56,4 @@ instruction
 
 address
   : WORD
-  : NUM
+  | NUM
