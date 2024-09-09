@@ -1,37 +1,7 @@
 from sys import argv
 from cmc_parser import Parser
 from cmc_nodes import Node
-
-instruction_table = {
-  "add": "00000",
-  "sub": "00001",
-  "mul": "00010",
-  "div": "00011",
-  "shl": "00100",
-  "shr": "00101",
-  "and": "00110",
-  "orr": "00111",
-  "xor": "01000",
-  "not": "01001",
-  "psh": "01010",
-  "pop": "01011",
-  "cal": "01100",
-  "ret": "01101",
-  "jmp": "01110",
-  "jif": "01111",
-  "lod": "1000",
-  "ldi": "1001",
-  "sto": "1010",
-  "inc": "10110",
-  "dec": "10111",
-  "cmp": "11000",
-  "nop": "11001",
-  "hlt": "11010",
-  "mov": "11011",
-  "rti": "11100",
-  "sei": "11101",
-  "cli": "11110",
-}
+from cmc_instruction_table import instruction_table
 
 def is_hex(value):
     if len(value) <= 1: return False
@@ -104,7 +74,7 @@ def tokenize(code):
                 elif is_dec(value):
                     token = Token("NUM", int(value))
                 elif is_reg(value):
-                    token = Token("REG", value)
+                    token = Token("REG", int(value[1], 16))
                 elif value in instruction_table:
                     token = Token(value.upper(), value)
                 elif value == "go":
