@@ -1,4 +1,4 @@
-from sys import argv
+from sys import argv, stderr
 from cmc_parser import Parser
 from cmc_nodes import Node
 from cmc_instruction_table import instruction_table
@@ -111,41 +111,55 @@ def tokenize(code):
         index += 1
     return tokens
 
-def main():
-    with open(argv[1], "r") as file:
-        code = file.read()
+def compile(code):
     tokens = tokenize(code)
     parser = Parser(tokens)
     parse_tree = parser.parse()
     Node.reset()
     parse_tree.get()
-    for address, label in Node.backpatch_list.items():
-        print(f"{address:04x}: {label}, ", end="")
-    print()
     Node.fix_addresses()
-    for label, address in Node.label_addresses.items():
-        print(f"{label}: {address:04x}, ", end="")
-    print()
-    print_program()
+    return Node.program
 
-def print_program():
-    from array import array
-    line = array("B", [0]*16)
-    last_line = array("B", [0]*16)
-    wrote = False
-    for row in range(65536//16):
-        last_line = line
-        line = Node.program[row*16: row*16+16]
-        if line == last_line:
-            if not wrote:
-                wrote = True
-                print("...")
-            continue
-        wrote = False
-        print(f"{row*16:04x}..:", end="")
-        for byte in line:
-            print(f" {byte:02x}", end="")
-        print()
+def get_code(input_files):
+    code = ""
+    for file_name in input_files: 
+        try:
+            with open(file_name, "r") as file:
+                code += file.read()
+        except IOError:
+            error(f"Invalid file name: {file_name}")
+    return code
+
+def save_program(program, output_file):
+    with open(output_file, "wb") as file:
+        file.write(Node.program)
+
+def error(msg, exit_code=1):
+    print(msg, file=stderr)
+    exit(exit_code)
+
+def get_file_names():
+    input_files = argv[1:]
+    is_output_file_defined = False
+    while "-o" in input_files:
+        index = input_files.index("-o")
+        if index+1 >= len(input_files):
+            error("Give file name after -o")
+        output_file = input_files[index+1]
+        input_files.pop(index+1)
+        input_files.pop(index)
+        is_output_file_defined = True
+    if len(input_files) == 0:
+        error("No input file is given.")
+    if not is_output_file_defined:
+        output_file = input_files[0].split(".")[0]
+    return input_files, output_file
+
+def main():
+    input_files, output_file = get_file_names()
+    code = get_code(input_files)
+    program = compile(code)
+    save_program(program, output_file)
 
 if __name__ == "__main__":
     main()
