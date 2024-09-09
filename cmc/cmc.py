@@ -148,11 +148,34 @@ def main():
     parser = Parser(tokens)
     parse_tree = parser.parse()
     Node.reset()
-    program = parse_tree.get()
-    print(Node.backpatch_list)
-    program = Node.fix_addresses(program)
-    print(Node.label_addresses)
-    print(program)
+    parse_tree.get()
+    for address, label in Node.backpatch_list.items():
+        print(f"{address:04x}: {label}, ", end="")
+    print()
+    Node.fix_addresses()
+    for label, address in Node.label_addresses.items():
+        print(f"{label}: {address:04x}, ", end="")
+    print()
+    print_program()
+
+def print_program():
+    from array import array
+    line = array("B", [0]*16)
+    last_line = array("B", [0]*16)
+    wrote = False
+    for row in range(65536//16):
+        last_line = line
+        line = Node.program[row*16: row*16+16]
+        if line == last_line:
+            if not wrote:
+                wrote = True
+                print("...")
+            continue
+        wrote = False
+        print(f"{row*16:04x}..:", end="")
+        for byte in line:
+            print(f" {byte:02x}", end="")
+        print()
 
 if __name__ == "__main__":
     main()
