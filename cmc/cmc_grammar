@@ -42,8 +42,10 @@ instruction
   | JMP address
   | JIF FLAG NUM address
   | LOD REG address
+  | LOD REG address PLUS byte
   | LDI REG byte
   | STO REG address
+  | STO REG address PLUS byte
   | INC REG
   | DEC REG
   | CMP REG REG

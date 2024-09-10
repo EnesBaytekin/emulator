@@ -194,7 +194,7 @@ def bitstring_to_bytes(bitstring):
         byte_array.append(byte)
     return byte_array
 
-class NodeInstruction1(Node):
+class NodeInstruction_add(Node):
     def __init__(self, add, reg1, reg2):
         super().__init__("instruction", add, reg1, reg2)
     def get(self):
@@ -206,7 +206,7 @@ class NodeInstruction1(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction2(Node):
+class NodeInstruction_sub(Node):
     def __init__(self, sub, reg1, reg2):
         super().__init__("instruction", sub, reg1, reg2)
     def get(self):
@@ -218,7 +218,7 @@ class NodeInstruction2(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction3(Node):
+class NodeInstruction_mul(Node):
     def __init__(self, mul, reg1, reg2):
         super().__init__("instruction", mul, reg1, reg2)
     def get(self):
@@ -230,7 +230,7 @@ class NodeInstruction3(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction4(Node):
+class NodeInstruction_div(Node):
     def __init__(self, div, reg1, reg2):
         super().__init__("instruction", div, reg1, reg2)
     def get(self):
@@ -242,7 +242,7 @@ class NodeInstruction4(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction5(Node):
+class NodeInstruction_shl(Node):
     def __init__(self, shl, reg, num):
         super().__init__("instruction", shl, reg, num)
     def get(self):
@@ -256,7 +256,7 @@ class NodeInstruction5(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction6(Node):
+class NodeInstruction_shr(Node):
     def __init__(self, shr, reg, num):
         super().__init__("instruction", shr, reg, num)
     def get(self):
@@ -270,7 +270,7 @@ class NodeInstruction6(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction7(Node):
+class NodeInstruction_and(Node):
     def __init__(self, and_, reg1, reg2):
         super().__init__("instruction", and_, reg1, reg2)
     def get(self):
@@ -282,7 +282,7 @@ class NodeInstruction7(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction8(Node):
+class NodeInstruction_orr(Node):
     def __init__(self, orr, reg1, reg2):
         super().__init__("instruction", orr, reg1, reg2)
     def get(self):
@@ -294,7 +294,7 @@ class NodeInstruction8(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction9(Node):
+class NodeInstruction_xor(Node):
     def __init__(self, xor, reg1, reg2):
         super().__init__("instruction", xor, reg1, reg2)
     def get(self):
@@ -306,7 +306,7 @@ class NodeInstruction9(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction10(Node):
+class NodeInstruction_not(Node):
     def __init__(self, not_, reg):
         super().__init__("instruction", not_, reg)
     def get(self):
@@ -317,7 +317,7 @@ class NodeInstruction10(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction11(Node):
+class NodeInstruction_psh(Node):
     def __init__(self, psh, reg):
         super().__init__("instruction", psh, reg)
     def get(self):
@@ -328,7 +328,7 @@ class NodeInstruction11(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction12(Node):
+class NodeInstruction_pop(Node):
     def __init__(self, pop, reg):
         super().__init__("instruction", pop, reg)
     def get(self):
@@ -339,7 +339,7 @@ class NodeInstruction12(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction13(Node):
+class NodeInstruction_cal(Node):
     def __init__(self, cal, address):
         super().__init__("instruction", cal, address)
     def get(self):
@@ -350,7 +350,7 @@ class NodeInstruction13(Node):
         Node.add(result)
         self.children[1].get()
 
-class NodeInstruction14(Node):
+class NodeInstruction_ret(Node):
     def __init__(self, ret):
         super().__init__("instruction", ret)
     def get(self):
@@ -360,7 +360,7 @@ class NodeInstruction14(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction15(Node):
+class NodeInstruction_jmp(Node):
     def __init__(self, jmp, address):
         super().__init__("instruction", jmp, address)
     def get(self):
@@ -371,7 +371,7 @@ class NodeInstruction15(Node):
         Node.add(result)
         self.children[1].get()
 
-class NodeInstruction16(Node):
+class NodeInstruction_jif(Node):
     def __init__(self, jif, flag, num, address):
         super().__init__("instruction", jif, flag, num, address)
     def get(self):
@@ -387,7 +387,7 @@ class NodeInstruction16(Node):
         Node.add(result)
         self.children[3].get()
 
-class NodeInstruction17(Node):
+class NodeInstruction_lod(Node):
     def __init__(self, lod, reg, address):
         super().__init__("instruction", lod, reg, address)
     def get(self):
@@ -399,7 +399,27 @@ class NodeInstruction17(Node):
         Node.add(result)
         self.children[2].get()
 
-class NodeInstruction18(Node):
+class NodeInstruction_lod2(Node):
+    def __init__(self, lod, reg, address, plus, num):
+        super().__init__("instruction", lod, reg, address, plus, num)
+    def get(self):
+        # ldi re <num>
+        # lod <reg> <address>
+        op_code = instruction_table["ldi"]
+        num = self.children[4].value
+        if num < 0 or num >= 256:
+            error("Offset value must be in range [0, 255]")
+        instruction = f"{op_code}{0xe:04b}{num:08b}"
+        result = bitstring_to_bytes(instruction)
+        instruction_name = self.children[0].value
+        op_code = instruction_table[instruction_name]
+        reg = self.children[1].value
+        instruction = f"{op_code}{reg:04b}"
+        result += bitstring_to_bytes(instruction)
+        Node.add(result)
+        self.children[2].get()
+
+class NodeInstruction_ldi(Node):
     def __init__(self, ldi, reg, byte):
         super().__init__("instruction", ldi, reg, byte)
     def get(self):
@@ -411,7 +431,7 @@ class NodeInstruction18(Node):
         Node.add(result)
         self.children[2].get()
 
-class NodeInstruction19(Node):
+class NodeInstruction_sto(Node):
     def __init__(self, sto, reg, address):
         super().__init__("instruction", sto, reg, address)
     def get(self):
@@ -422,8 +442,28 @@ class NodeInstruction19(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
         self.children[2].get()
+        
+class NodeInstruction_sto2(Node):
+    def __init__(self, sto, reg, address, plus, num):
+        super().__init__("instruction", sto, reg, address, plus, num)
+    def get(self):
+        # ldi re <num>
+        # sto <reg> <address>
+        op_code = instruction_table["ldi"]
+        num = self.children[4].value
+        if num < 0 or num >= 256:
+            error("Offset value must be in range [0, 255]")
+        instruction = f"{op_code}{0xe:04b}{num:08b}"
+        result = bitstring_to_bytes(instruction)
+        instruction_name = self.children[0].value
+        op_code = instruction_table[instruction_name]
+        reg = self.children[1].value
+        instruction = f"{op_code}{reg:04b}"
+        result += bitstring_to_bytes(instruction)
+        Node.add(result)
+        self.children[2].get()
 
-class NodeInstruction20(Node):
+class NodeInstruction_inc(Node):
     def __init__(self, inc, reg):
         super().__init__("instruction", inc, reg)
     def get(self):
@@ -434,7 +474,7 @@ class NodeInstruction20(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction21(Node):
+class NodeInstruction_dec(Node):
     def __init__(self, dec, reg):
         super().__init__("instruction", dec, reg)
     def get(self):
@@ -445,7 +485,7 @@ class NodeInstruction21(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction22(Node):
+class NodeInstruction_cmp(Node):
     def __init__(self, cmp, reg1, reg2):
         super().__init__("instruction", cmp, reg1, reg2)
     def get(self):
@@ -457,7 +497,7 @@ class NodeInstruction22(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction23(Node):
+class NodeInstruction_nop(Node):
     def __init__(self, nop):
         super().__init__("instruction", nop)
     def get(self):
@@ -467,7 +507,7 @@ class NodeInstruction23(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction24(Node):
+class NodeInstruction_hlt(Node):
     def __init__(self, hlt):
         super().__init__("instruction", hlt)
     def get(self):
@@ -477,7 +517,7 @@ class NodeInstruction24(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction25(Node):
+class NodeInstruction_mov(Node):
     def __init__(self, mov, reg1, reg2):
         super().__init__("instruction", mov, reg1, reg2)
     def get(self):
@@ -489,7 +529,7 @@ class NodeInstruction25(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction26(Node):
+class NodeInstruction_rti(Node):
     def __init__(self, rti):
         super().__init__("instruction", rti)
     def get(self):
@@ -499,7 +539,7 @@ class NodeInstruction26(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction27(Node):
+class NodeInstruction_sei(Node):
     def __init__(self, sei):
         super().__init__("instruction", sei)
     def get(self):
@@ -509,7 +549,7 @@ class NodeInstruction27(Node):
         result = bitstring_to_bytes(instruction)
         Node.add(result)
 
-class NodeInstruction28(Node):
+class NodeInstruction_cli(Node):
     def __init__(self, cli):
         super().__init__("instruction", cli)
     def get(self):

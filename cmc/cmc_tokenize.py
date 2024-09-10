@@ -60,6 +60,9 @@ def tokenize(code):
             elif char in "=":
                 token = Token("EQ", "=")
                 tokens.append(token)
+            elif char in "+":
+                token = Token("PLUS", "+")
+                tokens.append(token)
             elif char in ".":
                 state = "label"
                 value = ""

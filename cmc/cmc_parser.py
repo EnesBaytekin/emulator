@@ -135,7 +135,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.parse_reg()
                 if _3 is not None:
-                    return NodeInstruction1(_1, _2, _3)
+                    return NodeInstruction_add(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -145,7 +145,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("REG")
                 if _3 is not None:
-                    return NodeInstruction2(_1, _2, _3)
+                    return NodeInstruction_sub(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -155,7 +155,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("REG")
                 if _3 is not None:
-                    return NodeInstruction3(_1, _2, _3)
+                    return NodeInstruction_mul(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -165,7 +165,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("REG")
                 if _3 is not None:
-                    return NodeInstruction4(_1, _2, _3)
+                    return NodeInstruction_div(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -175,7 +175,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("NUM")
                 if _3 is not None:
-                    return NodeInstruction5(_1, _2, _3)
+                    return NodeInstruction_shl(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -185,7 +185,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("NUM")
                 if _3 is not None:
-                    return NodeInstruction6(_1, _2, _3)
+                    return NodeInstruction_shr(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -195,7 +195,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("REG")
                 if _3 is not None:
-                    return NodeInstruction7(_1, _2, _3)
+                    return NodeInstruction_and(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -205,7 +205,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("REG")
                 if _3 is not None:
-                    return NodeInstruction8(_1, _2, _3)
+                    return NodeInstruction_orr(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -215,7 +215,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("REG")
                 if _3 is not None:
-                    return NodeInstruction9(_1, _2, _3)
+                    return NodeInstruction_xor(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -223,7 +223,7 @@ class Parser:
         if _1 is not None:
             _2 = self.match("REG")
             if _2 is not None:
-                return NodeInstruction10(_1, _2)
+                return NodeInstruction_not(_1, _2)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -231,7 +231,7 @@ class Parser:
         if _1 is not None:
             _2 = self.match("REG")
             if _2 is not None:
-                return NodeInstruction11(_1, _2)
+                return NodeInstruction_psh(_1, _2)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -239,7 +239,7 @@ class Parser:
         if _1 is not None:
             _2 = self.match("REG")
             if _2 is not None:
-                return NodeInstruction12(_1, _2)
+                return NodeInstruction_pop(_1, _2)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -247,13 +247,13 @@ class Parser:
         if _1 is not None:
             _2 = self.parse_address()
             if _2 is not None:
-                return NodeInstruction13(_1, _2)
+                return NodeInstruction_cal(_1, _2)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
         _1 = self.match("RET")
         if _1 is not None:
-            return NodeInstruction14(_1)
+            return NodeInstruction_ret(_1)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -261,7 +261,7 @@ class Parser:
         if _1 is not None:
             _2 = self.parse_address()
             if _2 is not None:
-                return NodeInstruction15(_1, _2)
+                return NodeInstruction_jmp(_1, _2)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -273,7 +273,7 @@ class Parser:
                 if _3 is not None:
                     _4 = self.parse_address()
                     if _4 is not None:
-                        return NodeInstruction16(_1, _2, _3, _4)
+                        return NodeInstruction_jif(_1, _2, _3, _4)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -283,7 +283,14 @@ class Parser:
             if _2 is not None:
                 _3 = self.parse_address()
                 if _3 is not None:
-                    return NodeInstruction17(_1, _2, _3)
+                    index_checkpoint_a = self.index
+                    _4 = self.match("PLUS")
+                    if _4 is not None:
+                        _5 = self.match("NUM")
+                        if _5 is not None:
+                            return NodeInstruction_lod2(_1, _2, _3, _4, _5)
+                    self.index = index_checkpoint_a
+                    return NodeInstruction_lod(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -293,7 +300,7 @@ class Parser:
             if _2 is not None:
                 _3 = self.parse_byte()
                 if _3 is not None:
-                    return NodeInstruction18(_1, _2, _3)
+                    return NodeInstruction_ldi(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -303,7 +310,14 @@ class Parser:
             if _2 is not None:
                 _3 = self.parse_address()
                 if _3 is not None:
-                    return NodeInstruction19(_1, _2, _3)
+                    index_checkpoint_a = self.index
+                    _4 = self.match("PLUS")
+                    if _4 is not None:
+                        _5 = self.match("NUM")
+                        if _5 is not None:
+                            return NodeInstruction_sto2(_1, _2, _3, _4, _5)
+                    self.index = index_checkpoint_a
+                    return NodeInstruction_sto(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -311,7 +325,7 @@ class Parser:
         if _1 is not None:
             _2 = self.match("REG")
             if _2 is not None:
-                return NodeInstruction20(_1, _2)
+                return NodeInstruction_inc(_1, _2)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -319,7 +333,7 @@ class Parser:
         if _1 is not None:
             _2 = self.match("REG")
             if _2 is not None:
-                return NodeInstruction21(_1, _2)
+                return NodeInstruction_dec(_1, _2)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -329,19 +343,19 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("REG")
                 if _3 is not None:
-                    return NodeInstruction22(_1, _2, _3)
+                    return NodeInstruction_cmp(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
         _1 = self.match("NOP")
         if _1 is not None:
-            return NodeInstruction23(_1)
+            return NodeInstruction_nop(_1)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
         _1 = self.match("HLT")
         if _1 is not None:
-            return NodeInstruction24(_1)
+            return NodeInstruction_hlt(_1)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
@@ -351,25 +365,25 @@ class Parser:
             if _2 is not None:
                 _3 = self.match("REG")
                 if _3 is not None:
-                    return NodeInstruction25(_1, _2, _3)
+                    return NodeInstruction_mov(_1, _2, _3)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
         _1 = self.match("RTI")
         if _1 is not None:
-            return NodeInstruction26(_1)
+            return NodeInstruction_rti(_1)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
         _1 = self.match("SEI")
         if _1 is not None:
-            return NodeInstruction27(_1)
+            return NodeInstruction_sei(_1)
         
         self.index = index_checkpoint
         index_checkpoint = self.index
         _1 = self.match("CLI")
         if _1 is not None:
-            return NodeInstruction28(_1)
+            return NodeInstruction_cli(_1)
     
     def parse_address(self):
         
