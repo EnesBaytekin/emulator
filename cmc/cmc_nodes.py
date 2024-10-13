@@ -400,22 +400,15 @@ class NodeInstruction_lod(Node):
         self.children[2].get()
 
 class NodeInstruction_lod2(Node):
-    def __init__(self, lod, reg, address, plus, num):
-        super().__init__("instruction", lod, reg, address, plus, num)
+    def __init__(self, lod, reg, address, offset):
+        super().__init__("instruction", lod, reg, address, offset)
     def get(self):
-        # ldi re <num>
-        # lod <reg> <address>
-        op_code = instruction_table["ldi"]
-        num = self.children[4].value
-        if num < 0 or num >= 256:
-            error("Offset value must be in range [0, 255]")
-        instruction = f"{op_code}{0xe:04b}{num:08b}"
-        result = bitstring_to_bytes(instruction)
+        self.children[3].get()
         instruction_name = self.children[0].value
         op_code = instruction_table[instruction_name]
         reg = self.children[1].value
         instruction = f"{op_code}{reg:04b}"
-        result += bitstring_to_bytes(instruction)
+        result = bitstring_to_bytes(instruction)
         Node.add(result)
         self.children[2].get()
 
@@ -444,22 +437,15 @@ class NodeInstruction_sto(Node):
         self.children[2].get()
         
 class NodeInstruction_sto2(Node):
-    def __init__(self, sto, reg, address, plus, num):
-        super().__init__("instruction", sto, reg, address, plus, num)
+    def __init__(self, sto, reg, address, offset):
+        super().__init__("instruction", sto, reg, address, offset)
     def get(self):
-        # ldi re <num>
-        # sto <reg> <address>
-        op_code = instruction_table["ldi"]
-        num = self.children[4].value
-        if num < 0 or num >= 256:
-            error("Offset value must be in range [0, 255]")
-        instruction = f"{op_code}{0xe:04b}{num:08b}"
-        result = bitstring_to_bytes(instruction)
+        self.children[3].get()
         instruction_name = self.children[0].value
         op_code = instruction_table[instruction_name]
         reg = self.children[1].value
         instruction = f"{op_code}{reg:04b}"
-        result += bitstring_to_bytes(instruction)
+        result = bitstring_to_bytes(instruction)
         Node.add(result)
         self.children[2].get()
 
@@ -573,8 +559,8 @@ class NodeAddress1(Node):
         Node.add(result)
 
 class NodeAddress2(Node):
-    def __init__(self, NUM):
-        super().__init__("address", NUM)
+    def __init__(self, num):
+        super().__init__("address", num)
     def get(self):
         num = self.children[0].value
         if num < 0 or num >= 65536:
@@ -584,3 +570,43 @@ class NodeAddress2(Node):
         result = array("B", [addrH, addrL])
         Node.add(result)
 
+## OFFSET ##
+
+class NodeOffset1(Node):
+    def __init__(self, op, num, cl):
+        super().__init__("address", op, num, cl)
+    def get(self):
+        num = self.children[1].value
+        if num < 0 or num >= 256:
+            error("Offset value must be in range [0, 255]")
+        op_code = instruction_table["ldi"]
+        instruction = f"{op_code}{0xe:04b}{num:08b}"
+        result = bitstring_to_bytes(instruction)
+        Node.add(result)
+
+class NodeOffset2(Node):
+    def __init__(self, op, word, cl):
+        super().__init__("address", op, word, cl)
+    def get(self):
+        op_code = instruction_table["ldi"]
+        instruction = f"{op_code}{0xe:04b}00000000"
+        result = bitstring_to_bytes(instruction)
+        Node.add(result)
+        word = self.children[1].value
+        address = Node.get_label(word)
+        op_code = instruction_table["lod"]
+        instruction = f"{op_code}{0xe:04b}{address:016b}"
+        result = bitstring_to_bytes(instruction)
+        Node.add(result)
+
+class NodeOffset3(Node):
+    def __init__(self, op, word, offset, cl):
+        super().__init__("address", op, word, offset, cl)
+    def get(self):
+        self.children[2].get()
+        word = self.children[1].value
+        address = Node.get_label(word)
+        op_code = instruction_table["lod"]
+        instruction = f"{op_code}{0xe:04b}{address:016b}"
+        result = bitstring_to_bytes(instruction)
+        Node.add(result)

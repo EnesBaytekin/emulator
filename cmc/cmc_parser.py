@@ -284,11 +284,9 @@ class Parser:
                 _3 = self.parse_address()
                 if _3 is not None:
                     index_checkpoint_a = self.index
-                    _4 = self.match("PLUS")
+                    _4 = self.parse_offset()
                     if _4 is not None:
-                        _5 = self.match("NUM")
-                        if _5 is not None:
-                            return NodeInstruction_lod2(_1, _2, _3, _4, _5)
+                        return NodeInstruction_lod2(_1, _2, _3, _4)
                     self.index = index_checkpoint_a
                     return NodeInstruction_lod(_1, _2, _3)
         
@@ -311,11 +309,9 @@ class Parser:
                 _3 = self.parse_address()
                 if _3 is not None:
                     index_checkpoint_a = self.index
-                    _4 = self.match("PLUS")
+                    _4 = self.parse_offset()
                     if _4 is not None:
-                        _5 = self.match("NUM")
-                        if _5 is not None:
-                            return NodeInstruction_sto2(_1, _2, _3, _4, _5)
+                        return NodeInstruction_sto2(_1, _2, _3, _4)
                     self.index = index_checkpoint_a
                     return NodeInstruction_sto(_1, _2, _3)
         
@@ -397,3 +393,32 @@ class Parser:
         _1 = self.match("NUM")
         if _1 is not None:
             return NodeAddress1(_1)
+
+    def parse_offset(self):
+
+        _1 = self.match("[")
+        if _1 is not None:
+
+            index_checkpoint = self.index
+            _2 = self.match("NUM")
+            if _2 is not None:
+                _3 = self.match("]")
+                if _3 is not None:
+                    return NodeOffset1(_1, _2, _3)
+            
+            self.index = index_checkpoint
+            _2 = self.match("WORD")
+            if _2 is not None:
+                
+                index_checkpoint_a = self.index
+                _3 = self.match("]")
+                if _3 is not None:
+                    return NodeOffset2(_1, _2, _3)
+                
+                self.index = index_checkpoint_a
+                _3 = self.parse_offset()
+                if _3 is not None:
+                    _4 = self.match("]")
+                    if _4 is not None:
+                        return NodeOffset3(_1, _2, _3, _4)
+            
